@@ -1,45 +1,56 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import * as bcrypt from 'bcryptjs';
 import { LoginDto } from './dto/login.dto';
 import { LoginResponseDto } from './dto/login-response.dto';
+import { User } from '../user/entities/user.entity';
 
 @Injectable()
 export class AuthService {
-  constructor(private jwtService: JwtService) {}
+  constructor(
+    private jwtService: JwtService,
+    @InjectRepository(User)
+    private userRepository: Repository<User>,
+  ) {}
 
-  login(loginDto: LoginDto): LoginResponseDto {
-    // Usuario admin hardcodeado temporalmente
-    const adminUser = {
-      id: 'admin-root-id',
-      email: 'admin@quepasaoaxaca.com',
-      password: 'admin123', // En producción esto debería estar hasheado
-      role: 'admin',
-    };
+  async login(loginDto: LoginDto): Promise<LoginResponseDto> {
+    // Buscar usuario en la base de datos
+    const user = await this.userRepository.findOne({
+      where: { email: loginDto.email },
+    });
 
-    // Verificar credenciales
-    if (
-      loginDto.email === adminUser.email &&
-      loginDto.password === adminUser.password
-    ) {
-      // Generar token JWT
-      const payload = {
-        email: adminUser.email,
-        sub: adminUser.id,
-        role: adminUser.role,
-      };
-
-      const access_token = this.jwtService.sign(payload);
-
-      return {
-        access_token,
-        user: {
-          id: adminUser.id,
-          email: adminUser.email,
-          role: adminUser.role,
-        },
-      };
+    if (!user) {
+      throw new UnauthorizedException('Credenciales inválidas');
     }
 
-    throw new UnauthorizedException('Credenciales inválidas');
+    // Verificar contraseña
+    const isPasswordValid = await bcrypt.compare(
+      loginDto.password,
+      user.passwordHash,
+    );
+
+    if (!isPasswordValid) {
+      throw new UnauthorizedException('Credenciales inválidas');
+    }
+
+    // Generar token JWT
+    const payload = {
+      email: user.email,
+      sub: user.id,
+      role: user.role,
+    };
+
+    const access_token = this.jwtService.sign(payload);
+
+    return {
+      access_token,
+      user: {
+        id: user.id,
+        email: user.email,
+        role: user.role,
+      },
+    };
   }
 }
