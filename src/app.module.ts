@@ -6,6 +6,7 @@ import { UserModule } from './user/user.module';
 import { CategoriaModule } from './categoria/categoria.module';
 import { EventoModule } from './evento/evento.module';
 import { FavoriteModule } from './favorite/favorite.module';
+import { AuthModule } from './auth/auth.module';
 import { User } from './user/entities/user.entity';
 import { Categoria } from './categoria/entities/categoria.entity';
 import { Evento } from './evento/entities/evento.entity';
@@ -28,9 +29,7 @@ const DBModule = TypeOrmModule.forRoot({
     UserFavorite,
     DeviceFavorite,
   ],
-  migrations: ['src/migrations/*.ts'],
-  synchronize: false,
-  migrationsRun: true,
+  synchronize: true,
 });
 
 @Module({
@@ -40,6 +39,7 @@ const DBModule = TypeOrmModule.forRoot({
     CategoriaModule,
     EventoModule,
     FavoriteModule,
+    AuthModule,
   ],
   controllers: [AppController],
   providers: [AppService],
