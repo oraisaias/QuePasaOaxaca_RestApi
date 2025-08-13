@@ -1,11 +1,4 @@
-import { Module } from '@nestjs/common';
-import { AppController } from './app.controller';
-import { AppService } from './app.service';
-import { TypeOrmModule } from '@nestjs/typeorm';
-import { UserModule } from './user/user.module';
-import { CategoriaModule } from './categoria/categoria.module';
-import { EventoModule } from './evento/evento.module';
-import { FavoriteModule } from './favorite/favorite.module';
+import { DataSource } from 'typeorm';
 import { User } from './user/entities/user.entity';
 import { Categoria } from './categoria/entities/categoria.entity';
 import { Evento } from './evento/entities/evento.entity';
@@ -13,7 +6,7 @@ import { EventoCategoria } from './evento/entities/evento-categoria.entity';
 import { UserFavorite } from './favorite/entities/user-favorite.entity';
 import { DeviceFavorite } from './favorite/entities/device-favorite.entity';
 
-const DBModule = TypeOrmModule.forRoot({
+export const AppDataSource = new DataSource({
   type: 'postgres',
   host: 'localhost',
   port: 5432,
@@ -30,18 +23,4 @@ const DBModule = TypeOrmModule.forRoot({
   ],
   migrations: ['src/migrations/*.ts'],
   synchronize: false,
-  migrationsRun: true,
 });
-
-@Module({
-  imports: [
-    DBModule,
-    UserModule,
-    CategoriaModule,
-    EventoModule,
-    FavoriteModule,
-  ],
-  controllers: [AppController],
-  providers: [AppService],
-})
-export class AppModule {}

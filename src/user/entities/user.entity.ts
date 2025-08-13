@@ -4,7 +4,10 @@ import {
   PrimaryGeneratedColumn,
   CreateDateColumn,
   UpdateDateColumn,
+  OneToMany,
 } from 'typeorm';
+import { Evento } from '../../evento/entities/evento.entity';
+import { UserFavorite } from '../../favorite/entities/user-favorite.entity';
 
 export enum UserRole {
   ADMIN = 'admin',
@@ -35,4 +38,10 @@ export class User {
 
   @UpdateDateColumn({ name: 'updated_at' })
   updatedAt: Date;
+
+  @OneToMany(() => Evento, (evento) => evento.user)
+  eventos: Evento[];
+
+  @OneToMany(() => UserFavorite, (userFavorite) => userFavorite.user)
+  userFavorites: UserFavorite[];
 }
