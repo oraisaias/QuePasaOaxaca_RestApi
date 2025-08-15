@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Evento, EventStatus } from './entities/evento.entity';
@@ -7,6 +7,8 @@ import { CreateEventoDto } from './dto/create-evento.dto';
 import { CmsEventoDto } from './dto/cms-evento.dto';
 import { PaginationDto } from './dto/pagination.dto';
 import { PaginatedResponseDto } from './dto/paginated-response.dto';
+import { PublicEventoDto } from './dto/public-evento.dto';
+import { EventIdentifierUtil } from './utils/event-identifier.util';
 
 @Injectable()
 export class EventoService {
@@ -60,7 +62,7 @@ export class EventoService {
     return savedEvento;
   }
 
-  async findAll() {
+  async findAll(): Promise<PublicEventoDto[]> {
     const eventos = await this.eventoRepository.find({
       select: [
         'id',
@@ -80,8 +82,13 @@ export class EventoService {
       relations: ['eventoCategorias', 'eventoCategorias.categoria'],
     });
 
-    // Transformar a la estructura deseada
+    // Transformar a la estructura deseada con identificador único
     return eventos.map((evento) => ({
+      eventId: EventIdentifierUtil.generateEventIdentifier(
+        evento.id,
+        evento.titulo,
+        evento.fechaInicio,
+      ),
       titulo: evento.titulo,
       descripcion: evento.descripcion,
       imagenUrl: evento.imagenUrl,
@@ -93,12 +100,75 @@ export class EventoService {
       precio: evento.precio,
       enlaceExterno: evento.enlaceExterno,
       status: evento.status,
-      createdBy: evento.createdBy,
-      eventoCategorias: evento.eventoCategorias.map((ec) => ({
+      categorias: evento.eventoCategorias.map((ec) => ({
         nombre: ec.categoria.nombre,
         descripcion: ec.categoria.descripcion,
       })),
     }));
+  }
+
+  async findByEventId(eventId: string): Promise<PublicEventoDto> {
+    // Validar el formato del identificador
+    if (!EventIdentifierUtil.isValidIdentifier(eventId)) {
+      throw new NotFoundException('Identificador de evento inválido');
+    }
+
+    // Buscar todos los eventos y encontrar el que coincida con el identificador
+    const eventos = await this.eventoRepository.find({
+      select: [
+        'id',
+        'titulo',
+        'descripcion',
+        'imagenUrl',
+        'fechaInicio',
+        'fechaFin',
+        'lat',
+        'lng',
+        'direccionTexto',
+        'precio',
+        'enlaceExterno',
+        'status',
+        'createdBy',
+      ],
+      relations: ['eventoCategorias', 'eventoCategorias.categoria'],
+    });
+
+    // Encontrar el evento que coincida con el identificador
+    const evento = eventos.find((evento) => {
+      const generatedId = EventIdentifierUtil.generateEventIdentifier(
+        evento.id,
+        evento.titulo,
+        evento.fechaInicio,
+      );
+      return generatedId === eventId;
+    });
+
+    if (!evento) {
+      throw new NotFoundException('Evento no encontrado');
+    }
+
+    return {
+      eventId: EventIdentifierUtil.generateEventIdentifier(
+        evento.id,
+        evento.titulo,
+        evento.fechaInicio,
+      ),
+      titulo: evento.titulo,
+      descripcion: evento.descripcion,
+      imagenUrl: evento.imagenUrl,
+      fechaInicio: evento.fechaInicio,
+      fechaFin: evento.fechaFin,
+      lat: evento.lat,
+      lng: evento.lng,
+      direccionTexto: evento.direccionTexto,
+      precio: evento.precio,
+      enlaceExterno: evento.enlaceExterno,
+      status: evento.status,
+      categorias: evento.eventoCategorias.map((ec) => ({
+        nombre: ec.categoria.nombre,
+        descripcion: ec.categoria.descripcion,
+      })),
+    };
   }
 
   async findAllForCms(
