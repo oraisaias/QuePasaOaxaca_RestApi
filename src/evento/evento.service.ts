@@ -4,6 +4,9 @@ import { Repository } from 'typeorm';
 import { Evento, EventStatus } from './entities/evento.entity';
 import { EventoCategoria } from './entities/evento-categoria.entity';
 import { CreateEventoDto } from './dto/create-evento.dto';
+import { CmsEventoDto } from './dto/cms-evento.dto';
+import { PaginationDto } from './dto/pagination.dto';
+import { PaginatedResponseDto } from './dto/paginated-response.dto';
 
 @Injectable()
 export class EventoService {
@@ -91,10 +94,46 @@ export class EventoService {
       enlaceExterno: evento.enlaceExterno,
       status: evento.status,
       createdBy: evento.createdBy,
-      eventoCategorias: evento.eventoCategorias.map(ec => ({
+      eventoCategorias: evento.eventoCategorias.map((ec) => ({
         nombre: ec.categoria.nombre,
         descripcion: ec.categoria.descripcion,
       })),
     }));
+  }
+
+  async findAllForCms(
+    paginationDto: PaginationDto,
+  ): Promise<PaginatedResponseDto<CmsEventoDto>> {
+    const { page = 1, limit = 10 } = paginationDto;
+    const skip = (page - 1) * limit;
+
+    const [eventos, total] = await this.eventoRepository.findAndCount({
+      select: ['id', 'titulo', 'fechaInicio', 'direccionTexto', 'precio'],
+      relations: ['eventoCategorias'],
+      skip,
+      take: limit,
+      order: { createdAt: 'DESC' },
+    });
+
+    const totalPages = Math.ceil(total / limit);
+    const hasNext = page < totalPages;
+    const hasPrev = page > 1;
+
+    return {
+      data: eventos.map((evento) => ({
+        id: evento.id,
+        titulo: evento.titulo,
+        fechaInicio: evento.fechaInicio.toISOString(),
+        direccionTexto: evento.direccionTexto,
+        precio: evento.precio,
+        categoriaIds: evento.eventoCategorias.map((ec) => ec.categoriaId),
+      })),
+      total,
+      page,
+      limit,
+      totalPages,
+      hasNext,
+      hasPrev,
+    };
   }
 }

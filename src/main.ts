@@ -10,16 +10,19 @@ async function bootstrap() {
     origin: [
       'http://localhost:3000',
       'http://localhost:3001',
-      'http://localhost:5173', // Vite
-      'http://localhost:8080', // Vue CLI
-      'http://localhost:4200', // Angular
-      'http://localhost:8000', // Django
+      'http://localhost:5173',
+      'http://localhost:8080',
+      'http://localhost:4200',
+      'http://localhost:8000',
       'http://127.0.0.1:3000',
       'http://127.0.0.1:3001',
       'http://127.0.0.1:5173',
       'http://127.0.0.1:8080',
       'http://127.0.0.1:4200',
       'http://127.0.0.1:8000',
+      'http://192.168.1.199:3001', // Tu app local
+      'http://192.168.1.199:3000',
+      'http://192.168.1.199:5173',
     ],
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: [
