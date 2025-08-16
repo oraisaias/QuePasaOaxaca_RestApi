@@ -1,9 +1,14 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Evento, EventStatus } from './entities/evento.entity';
 import { EventoCategoria } from './entities/evento-categoria.entity';
 import { CreateEventoDto } from './dto/create-evento.dto';
+import { UpdateEventoDto } from './dto/update-evento.dto';
 import { CmsEventoDto } from './dto/cms-evento.dto';
 import { PaginationDto } from './dto/pagination.dto';
 import { PaginatedResponseDto } from './dto/paginated-response.dto';
@@ -178,7 +183,14 @@ export class EventoService {
     const skip = (page - 1) * limit;
 
     const [eventos, total] = await this.eventoRepository.findAndCount({
-      select: ['id', 'titulo', 'fechaInicio', 'direccionTexto', 'precio'],
+      select: [
+        'id',
+        'titulo',
+        'fechaInicio',
+        'direccionTexto',
+        'precio',
+        'createdAt',
+      ],
       relations: ['eventoCategorias'],
       skip,
       take: limit,
@@ -204,6 +216,142 @@ export class EventoService {
       totalPages,
       hasNext,
       hasPrev,
+    };
+  }
+
+  async removeById(id: string, userId: string): Promise<void> {
+    // Buscar el evento por su ID real
+    const evento = await this.eventoRepository.findOne({
+      where: { id },
+      select: ['id', 'createdBy'],
+    });
+
+    if (!evento) {
+      throw new NotFoundException('Evento no encontrado');
+    }
+
+    // Verificar que el usuario sea el creador del evento
+    if (evento.createdBy !== userId) {
+      throw new ForbiddenException(
+        'No tienes permisos para eliminar este evento',
+      );
+    }
+
+    // Eliminar las relaciones con categorías primero
+    await this.eventoCategoriaRepository.delete({ eventoId: id });
+
+    // Eliminar el evento
+    await this.eventoRepository.remove(evento);
+  }
+
+  async updateById(
+    id: string,
+    updateEventoDto: UpdateEventoDto,
+    userId: string,
+  ): Promise<CmsEventoDto> {
+    // Buscar el evento por su ID real
+    const evento = await this.eventoRepository.findOne({
+      where: { id },
+      select: ['id', 'createdBy'],
+    });
+
+    if (!evento) {
+      throw new NotFoundException('Evento no encontrado');
+    }
+
+    // Verificar que el usuario sea el creador del evento
+    if (evento.createdBy !== userId) {
+      throw new ForbiddenException(
+        'No tienes permisos para modificar este evento',
+      );
+    }
+
+    // Obtener el evento completo para actualizarlo
+    const eventoToUpdate = await this.eventoRepository.findOne({
+      where: { id },
+      relations: ['eventoCategorias', 'eventoCategorias.categoria'],
+    });
+
+    if (!eventoToUpdate) {
+      throw new NotFoundException('Evento no encontrado');
+    }
+
+    // Actualizar campos del evento
+    if (updateEventoDto.titulo !== undefined) {
+      eventoToUpdate.titulo = updateEventoDto.titulo;
+    }
+    if (updateEventoDto.descripcion !== undefined) {
+      eventoToUpdate.descripcion = updateEventoDto.descripcion;
+    }
+    if (updateEventoDto.imagenUrl !== undefined) {
+      eventoToUpdate.imagenUrl = updateEventoDto.imagenUrl;
+    }
+    if (updateEventoDto.fechaInicio !== undefined) {
+      eventoToUpdate.fechaInicio = new Date(updateEventoDto.fechaInicio);
+    }
+    if (updateEventoDto.fechaFin !== undefined && updateEventoDto.fechaFin) {
+      eventoToUpdate.fechaFin = new Date(updateEventoDto.fechaFin);
+    }
+    if (updateEventoDto.lat !== undefined) {
+      eventoToUpdate.lat = updateEventoDto.lat;
+    }
+    if (updateEventoDto.lng !== undefined) {
+      eventoToUpdate.lng = updateEventoDto.lng;
+    }
+    if (updateEventoDto.direccionTexto !== undefined) {
+      eventoToUpdate.direccionTexto = updateEventoDto.direccionTexto;
+    }
+    if (updateEventoDto.precio !== undefined) {
+      eventoToUpdate.precio = updateEventoDto.precio;
+    }
+    if (updateEventoDto.enlaceExterno !== undefined) {
+      eventoToUpdate.enlaceExterno = updateEventoDto.enlaceExterno;
+    }
+    if (updateEventoDto.status !== undefined) {
+      eventoToUpdate.status = updateEventoDto.status;
+    }
+
+    // Guardar el evento actualizado
+    await this.eventoRepository.save(eventoToUpdate);
+
+    // Actualizar categorías si se proporcionan
+    if (updateEventoDto.categoriaIds !== undefined) {
+      // Eliminar categorías existentes
+      await this.eventoCategoriaRepository.delete({ eventoId: id });
+
+      // Crear nuevas relaciones con categorías
+      if (updateEventoDto.categoriaIds.length > 0) {
+        const eventoCategorias = updateEventoDto.categoriaIds.map(
+          (categoriaId) => {
+            const eventoCategoria = new EventoCategoria();
+            eventoCategoria.eventoId = id;
+            eventoCategoria.categoriaId = categoriaId;
+            return eventoCategoria;
+          },
+        );
+
+        await this.eventoCategoriaRepository.save(eventoCategorias);
+      }
+    }
+
+    // Obtener el evento actualizado con las relaciones
+    const updatedEvento = await this.eventoRepository.findOne({
+      where: { id },
+      relations: ['eventoCategorias'],
+    });
+
+    if (!updatedEvento) {
+      throw new NotFoundException('Error al obtener el evento actualizado');
+    }
+
+    // Retornar en formato CMS
+    return {
+      id: updatedEvento.id,
+      titulo: updatedEvento.titulo,
+      fechaInicio: updatedEvento.fechaInicio.toISOString(),
+      direccionTexto: updatedEvento.direccionTexto,
+      precio: updatedEvento.precio,
+      categoriaIds: updatedEvento.eventoCategorias.map((ec) => ec.categoriaId),
     };
   }
 }
