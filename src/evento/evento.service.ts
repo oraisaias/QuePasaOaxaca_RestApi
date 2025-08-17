@@ -13,7 +13,7 @@ import { CmsEventoDto } from './dto/cms-evento.dto';
 import { PaginationDto } from './dto/pagination.dto';
 import { PaginatedResponseDto } from './dto/paginated-response.dto';
 import { PublicEventoDto } from './dto/public-evento.dto';
-import { EventIdentifierUtil } from './utils/event-identifier.util';
+
 
 @Injectable()
 export class EventoService {
@@ -87,13 +87,9 @@ export class EventoService {
       relations: ['eventoCategorias', 'eventoCategorias.categoria'],
     });
 
-    // Transformar a la estructura deseada con identificador único
+    // Transformar a la estructura deseada con ID directo
     return eventos.map((evento) => ({
-      eventId: EventIdentifierUtil.generateEventIdentifier(
-        evento.id,
-        evento.titulo,
-        evento.fechaInicio,
-      ),
+      id: evento.id,
       titulo: evento.titulo,
       descripcion: evento.descripcion,
       imagenUrl: evento.imagenUrl,
@@ -113,13 +109,9 @@ export class EventoService {
   }
 
   async findByEventId(eventId: string): Promise<PublicEventoDto> {
-    // Validar el formato del identificador
-    if (!EventIdentifierUtil.isValidIdentifier(eventId)) {
-      throw new NotFoundException('Identificador de evento inválido');
-    }
-
-    // Buscar todos los eventos y encontrar el que coincida con el identificador
-    const eventos = await this.eventoRepository.find({
+    // Buscar el evento por su ID directo
+    const evento = await this.eventoRepository.findOne({
+      where: { id: eventId },
       select: [
         'id',
         'titulo',
@@ -138,26 +130,12 @@ export class EventoService {
       relations: ['eventoCategorias', 'eventoCategorias.categoria'],
     });
 
-    // Encontrar el evento que coincida con el identificador
-    const evento = eventos.find((evento) => {
-      const generatedId = EventIdentifierUtil.generateEventIdentifier(
-        evento.id,
-        evento.titulo,
-        evento.fechaInicio,
-      );
-      return generatedId === eventId;
-    });
-
     if (!evento) {
       throw new NotFoundException('Evento no encontrado');
     }
 
     return {
-      eventId: EventIdentifierUtil.generateEventIdentifier(
-        evento.id,
-        evento.titulo,
-        evento.fechaInicio,
-      ),
+      id: evento.id,
       titulo: evento.titulo,
       descripcion: evento.descripcion,
       imagenUrl: evento.imagenUrl,
@@ -220,7 +198,7 @@ export class EventoService {
   }
 
   async removeById(id: string, userId: string): Promise<void> {
-    // Buscar el evento por su ID real
+    // Buscar el evento por su ID
     const evento = await this.eventoRepository.findOne({
       where: { id },
       select: ['id', 'createdBy'],
@@ -249,7 +227,7 @@ export class EventoService {
     updateEventoDto: UpdateEventoDto,
     userId: string,
   ): Promise<CmsEventoDto> {
-    // Buscar el evento por su ID real
+    // Buscar el evento por su ID
     const evento = await this.eventoRepository.findOne({
       where: { id },
       select: ['id', 'createdBy'],

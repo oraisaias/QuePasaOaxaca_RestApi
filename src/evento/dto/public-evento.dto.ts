@@ -1,7 +1,7 @@
 import { EventStatus } from '../entities/evento.entity';
 
 export class PublicEventoDto {
-  eventId: string; // Identificador único generado, no el ID de la DB
+  id: string; // ID directo de la base de datos
   titulo: string;
   descripcion?: string;
   imagenUrl?: string;

@@ -44,9 +44,9 @@ export class EventoController {
     return this.eventoService.findAllForCms(paginationDto);
   }
 
-  @Get(':eventId')
-  async findOne(@Param('eventId') eventId: string) {
-    return this.eventoService.findByEventId(eventId);
+  @Get(':id')
+  async findOne(@Param('id') id: string) {
+    return this.eventoService.findByEventId(id);
   }
 
   @Delete('cms/:id')
