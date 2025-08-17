@@ -214,7 +214,10 @@ export class EventoService {
         fechaInicio: evento.fechaInicio.toISOString(),
         direccionTexto: evento.direccionTexto,
         precio: evento.precio,
-        categoriaIds: evento.eventoCategorias.map((ec) => ec.categoriaId),
+        categoriaIds: evento.eventoCategorias.map((ec) => ({
+          id: ec.categoriaId,
+          nombre: ec.categoria.nombre,
+        })),
       })),
       total,
       page,
@@ -339,7 +342,10 @@ export class EventoService {
       fechaInicio: updatedEvento.fechaInicio.toISOString(),
       direccionTexto: updatedEvento.direccionTexto,
       precio: updatedEvento.precio,
-      categoriaIds: updatedEvento.eventoCategorias.map((ec) => ec.categoriaId),
+      categoriaIds: updatedEvento.eventoCategorias.map((ec) => ({
+        id: ec.categoriaId,
+        nombre: ec.categoria.nombre,
+      })),
     };
   }
 }

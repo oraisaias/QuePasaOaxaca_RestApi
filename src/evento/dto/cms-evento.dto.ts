@@ -4,5 +4,8 @@ export class CmsEventoDto {
   fechaInicio: string;
   direccionTexto?: string;
   precio?: number;
-  categoriaIds: string[];
+  categoriaIds: {
+    id: string;
+    nombre: string;
+  }[];
 }

@@ -8,6 +8,7 @@ import { CategoriaModule } from './categoria/categoria.module';
 import { EventoModule } from './evento/evento.module';
 import { FavoriteModule } from './favorite/favorite.module';
 import { AuthModule } from './auth/auth.module';
+import { OpenaiModule } from './openai/openai.module';
 import { User } from './user/entities/user.entity';
 import { Categoria } from './categoria/entities/categoria.entity';
 import { Evento } from './evento/entities/evento.entity';
@@ -45,6 +46,7 @@ const DBModule = TypeOrmModule.forRoot({
     EventoModule,
     FavoriteModule,
     AuthModule,
+    OpenaiModule,
   ],
   controllers: [AppController],
   providers: [AppService],
