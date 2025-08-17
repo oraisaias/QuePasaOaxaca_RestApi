@@ -1,19 +1,19 @@
 import {
   Injectable,
   NotFoundException,
-  ForbiddenException,
+  BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Evento, EventStatus } from './entities/evento.entity';
 import { EventoCategoria } from './entities/evento-categoria.entity';
+import { Categoria } from '../categoria/entities/categoria.entity';
 import { CreateEventoDto } from './dto/create-evento.dto';
 import { UpdateEventoDto } from './dto/update-evento.dto';
 import { CmsEventoDto } from './dto/cms-evento.dto';
 import { PaginationDto } from './dto/pagination.dto';
 import { PaginatedResponseDto } from './dto/paginated-response.dto';
 import { PublicEventoDto } from './dto/public-evento.dto';
-
 
 @Injectable()
 export class EventoService {
@@ -22,9 +22,37 @@ export class EventoService {
     private eventoRepository: Repository<Evento>,
     @InjectRepository(EventoCategoria)
     private eventoCategoriaRepository: Repository<EventoCategoria>,
+    @InjectRepository(Categoria)
+    private categoriaRepository: Repository<Categoria>,
   ) {}
 
   async create(createEventoDto: CreateEventoDto): Promise<Evento> {
+    // Validar que las categorías existan antes de crear el evento
+    if (
+      createEventoDto.categoriaIds &&
+      createEventoDto.categoriaIds.length > 0
+    ) {
+      // Verificar cada categoría individualmente
+      const categoriasNoEncontradas: string[] = [];
+
+      for (const categoriaId of createEventoDto.categoriaIds) {
+        const categoria = await this.categoriaRepository.findOne({
+          where: { id: categoriaId },
+          select: ['id'],
+        });
+
+        if (!categoria) {
+          categoriasNoEncontradas.push(categoriaId);
+        }
+      }
+
+      if (categoriasNoEncontradas.length > 0) {
+        throw new BadRequestException(
+          `Las siguientes categorías no existen: ${categoriasNoEncontradas.join(', ')}`,
+        );
+      }
+    }
+
     // Crear el evento
     const evento = new Evento();
     evento.titulo = createEventoDto.titulo;
@@ -47,7 +75,7 @@ export class EventoService {
     // Guardar el evento
     const savedEvento = await this.eventoRepository.save(evento);
 
-    // Crear las relaciones con categorías
+    // Crear las relaciones con categorías (ya validadas)
     if (
       createEventoDto.categoriaIds &&
       createEventoDto.categoriaIds.length > 0
@@ -197,7 +225,7 @@ export class EventoService {
     };
   }
 
-  async removeById(id: string, userId: string): Promise<void> {
+  async removeById(id: string): Promise<void> {
     // Buscar el evento por su ID
     const evento = await this.eventoRepository.findOne({
       where: { id },
@@ -207,14 +235,6 @@ export class EventoService {
     if (!evento) {
       throw new NotFoundException('Evento no encontrado');
     }
-
-    // Verificar que el usuario sea el creador del evento
-    if (evento.createdBy !== userId) {
-      throw new ForbiddenException(
-        'No tienes permisos para eliminar este evento',
-      );
-    }
-
     // Eliminar las relaciones con categorías primero
     await this.eventoCategoriaRepository.delete({ eventoId: id });
 
@@ -225,7 +245,6 @@ export class EventoService {
   async updateById(
     id: string,
     updateEventoDto: UpdateEventoDto,
-    userId: string,
   ): Promise<CmsEventoDto> {
     // Buscar el evento por su ID
     const evento = await this.eventoRepository.findOne({
@@ -236,15 +255,6 @@ export class EventoService {
     if (!evento) {
       throw new NotFoundException('Evento no encontrado');
     }
-
-    // Verificar que el usuario sea el creador del evento
-    if (evento.createdBy !== userId) {
-      throw new ForbiddenException(
-        'No tienes permisos para modificar este evento',
-      );
-    }
-
-    // Obtener el evento completo para actualizarlo
     const eventoToUpdate = await this.eventoRepository.findOne({
       where: { id },
       relations: ['eventoCategorias', 'eventoCategorias.categoria'],

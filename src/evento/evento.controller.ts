@@ -7,7 +7,6 @@ import {
   Query,
   Param,
   Delete,
-  Request,
   Patch,
 } from '@nestjs/common';
 import { EventoService } from './evento.service';
@@ -15,13 +14,6 @@ import { CreateEventoDto } from './dto/create-evento.dto';
 import { UpdateEventoDto } from './dto/update-evento.dto';
 import { PaginationDto } from './dto/pagination.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
-
-interface RequestWithUser extends Request {
-  user: {
-    userId: string;
-    email: string;
-  };
-}
 
 @Controller('eventos')
 export class EventoController {
@@ -51,8 +43,8 @@ export class EventoController {
 
   @Delete('cms/:id')
   @UseGuards(JwtAuthGuard)
-  async removeCms(@Param('id') id: string, @Request() req: RequestWithUser) {
-    await this.eventoService.removeById(id, req.user.userId);
+  async removeCms(@Param('id') id: string) {
+    await this.eventoService.removeById(id);
     return { message: 'Evento eliminado exitosamente' };
   }
 
@@ -61,8 +53,7 @@ export class EventoController {
   async updateCms(
     @Param('id') id: string,
     @Body() updateEventoDto: UpdateEventoDto,
-    @Request() req: RequestWithUser,
   ) {
-    return this.eventoService.updateById(id, updateEventoDto, req.user.userId);
+    return this.eventoService.updateById(id, updateEventoDto);
   }
 }
