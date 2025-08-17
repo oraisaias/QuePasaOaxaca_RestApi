@@ -197,7 +197,7 @@ export class EventoService {
         'precio',
         'createdAt',
       ],
-      relations: ['eventoCategorias'],
+      relations: ['eventoCategorias', 'eventoCategorias.categoria'],
       skip,
       take: limit,
       order: { createdAt: 'DESC' },
@@ -215,7 +215,7 @@ export class EventoService {
         direccionTexto: evento.direccionTexto,
         precio: evento.precio,
         categoriaIds: evento.eventoCategorias.map((ec) => ({
-          id: ec.categoriaId,
+          id: ec.categoria.id,
           nombre: ec.categoria.nombre,
         })),
       })),
@@ -328,7 +328,7 @@ export class EventoService {
     // Obtener el evento actualizado con las relaciones
     const updatedEvento = await this.eventoRepository.findOne({
       where: { id },
-      relations: ['eventoCategorias'],
+      relations: ['eventoCategorias', 'eventoCategorias.categoria'],
     });
 
     if (!updatedEvento) {
@@ -342,10 +342,12 @@ export class EventoService {
       fechaInicio: updatedEvento.fechaInicio.toISOString(),
       direccionTexto: updatedEvento.direccionTexto,
       precio: updatedEvento.precio,
-      categoriaIds: updatedEvento.eventoCategorias.map((ec) => ({
-        id: ec.categoriaId,
-        nombre: ec.categoria.nombre,
-      })),
+      categoriaIds: updatedEvento.eventoCategorias.map((ec) => {
+        return {
+          id: ec.categoria.id,
+          nombre: ec.categoria.nombre,
+        };
+      }),
     };
   }
 }
