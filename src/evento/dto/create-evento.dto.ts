@@ -60,5 +60,4 @@ export class CreateEventoDto {
   @IsArray()
   @IsUUID('4', { each: true })
   categoriaIds: string[];
-  active: undefined;
 }

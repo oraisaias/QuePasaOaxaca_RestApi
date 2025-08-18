@@ -65,6 +65,9 @@ export class Evento {
   @Column({ default: false })
   active: boolean;
 
+  @Column({ name: 'is_recurrent', default: false })
+  isRecurrent: boolean;
+
   @Column({ name: 'created_by', nullable: true })
   createdBy: string;
 
@@ -76,6 +79,15 @@ export class Evento {
 
   @Column({ name: 'published_at', type: 'timestamptz', nullable: true })
   publishedAt: Date;
+
+  @Column({
+    name: 'geom',
+    type: 'geometry',
+    nullable: true,
+    spatialFeatureType: 'Point',
+    srid: 4326,
+  })
+  geom: any;
 
   @ManyToOne(() => User, { nullable: true })
   @JoinColumn({ name: 'created_by' })

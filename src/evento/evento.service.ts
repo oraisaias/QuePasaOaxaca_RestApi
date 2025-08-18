@@ -10,6 +10,7 @@ import { EventoCategoria } from './entities/evento-categoria.entity';
 import { Categoria } from '../categoria/entities/categoria.entity';
 import { CreateEventoDto } from './dto/create-evento.dto';
 import { UpdateEventoDto } from './dto/update-evento.dto';
+import { UpdateActiveDto } from './dto/update-active.dto';
 import { CmsEventoDto } from './dto/cms-evento.dto';
 import { PaginationDto } from './dto/pagination.dto';
 import { PaginatedResponseDto } from './dto/paginated-response.dto';
@@ -77,6 +78,14 @@ export class EventoService {
 
     // Guardar el evento
     const savedEvento = await this.eventoRepository.save(evento);
+
+    // Actualizar el campo geom si se proporcionan coordenadas
+    if (evento.lat !== undefined && evento.lng !== undefined) {
+      await this.eventoRepository.query(
+        `UPDATE eventos SET geom = ST_SetSRID(ST_MakePoint($1, $2), 4326) WHERE id = $3`,
+        [evento.lng, evento.lat, savedEvento.id],
+      );
+    }
 
     // Crear las relaciones con categorías (ya validadas)
     if (
@@ -370,6 +379,27 @@ export class EventoService {
     // Guardar el evento actualizado
     await this.eventoRepository.save(eventoToUpdate);
 
+    // Actualizar el campo geom si se cambiaron las coordenadas
+    if (
+      updateEventoDto.lat !== undefined ||
+      updateEventoDto.lng !== undefined
+    ) {
+      const finalLat =
+        updateEventoDto.lat !== undefined
+          ? updateEventoDto.lat
+          : eventoToUpdate.lat;
+      const finalLng =
+        updateEventoDto.lng !== undefined
+          ? updateEventoDto.lng
+          : eventoToUpdate.lng;
+      if (finalLat !== undefined && finalLng !== undefined) {
+        await this.eventoRepository.query(
+          `UPDATE eventos SET geom = ST_SetSRID(ST_MakePoint($1, $2), 4326) WHERE id = $3`,
+          [finalLng, finalLat, id],
+        );
+      }
+    }
+
     // Actualizar categorías si se proporcionan
     if (updateEventoDto.categoriaIds !== undefined) {
       // Eliminar categorías existentes
@@ -414,6 +444,26 @@ export class EventoService {
           nombre: ec.categoria.nombre,
         };
       }),
+    };
+  }
+
+  async updateActive(
+    id: string,
+    updateActiveDto: UpdateActiveDto,
+  ): Promise<{ message: string }> {
+    const evento = await this.eventoRepository.findOne({
+      where: { id },
+      select: ['id'],
+    });
+
+    if (!evento) {
+      throw new NotFoundException('Evento no encontrado');
+    }
+
+    await this.eventoRepository.update(id, { active: updateActiveDto.active });
+
+    return {
+      message: `Evento ${updateActiveDto.active ? 'activado' : 'desactivado'} exitosamente`,
     };
   }
 }

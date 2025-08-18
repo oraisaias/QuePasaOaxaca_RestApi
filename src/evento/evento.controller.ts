@@ -12,6 +12,7 @@ import {
 import { EventoService } from './evento.service';
 import { CreateEventoDto } from './dto/create-evento.dto';
 import { UpdateEventoDto } from './dto/update-evento.dto';
+import { UpdateActiveDto } from './dto/update-active.dto';
 import { NearbyEventosDto } from './dto/nearby-eventos.dto';
 import { PaginationDto } from './dto/pagination.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -62,5 +63,14 @@ export class EventoController {
     @Body() updateEventoDto: UpdateEventoDto,
   ) {
     return this.eventoService.updateById(id, updateEventoDto);
+  }
+
+  @Patch('cms/:id/active')
+  @UseGuards(JwtAuthGuard)
+  async updateActive(
+    @Param('id') id: string,
+    @Body() updateActiveDto: UpdateActiveDto,
+  ) {
+    return this.eventoService.updateActive(id, updateActiveDto);
   }
 }
