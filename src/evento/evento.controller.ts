@@ -12,6 +12,7 @@ import {
 import { EventoService } from './evento.service';
 import { CreateEventoDto } from './dto/create-evento.dto';
 import { UpdateEventoDto } from './dto/update-evento.dto';
+import { NearbyEventosDto } from './dto/nearby-eventos.dto';
 import { PaginationDto } from './dto/pagination.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
@@ -28,6 +29,12 @@ export class EventoController {
   @Get()
   async findAll() {
     return this.eventoService.findAll();
+  }
+
+  @Post('nearby')
+  @UseGuards(JwtAuthGuard)
+  async findNearby(@Body() nearbyDto: NearbyEventosDto) {
+    return this.eventoService.findNearbyActive(nearbyDto);
   }
 
   @Get('cms')

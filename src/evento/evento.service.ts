@@ -14,6 +14,7 @@ import { CmsEventoDto } from './dto/cms-evento.dto';
 import { PaginationDto } from './dto/pagination.dto';
 import { PaginatedResponseDto } from './dto/paginated-response.dto';
 import { PublicEventoDto } from './dto/public-evento.dto';
+import { NearbyEventosDto } from './dto/nearby-eventos.dto';
 
 @Injectable()
 export class EventoService {
@@ -71,7 +72,8 @@ export class EventoService {
     if (createEventoDto.enlaceExterno)
       evento.enlaceExterno = createEventoDto.enlaceExterno;
     evento.status = createEventoDto.status || EventStatus.DRAFT;
-    evento.active = createEventoDto.active !== undefined ? createEventoDto.active : false;
+    // Siempre iniciar como inactivo
+    evento.active = false;
 
     // Guardar el evento
     const savedEvento = await this.eventoRepository.save(evento);
@@ -95,6 +97,58 @@ export class EventoService {
 
     return savedEvento;
   }
+
+  /* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-return */
+  async findNearbyActive(nearbyDto: NearbyEventosDto): Promise<
+    Array<{
+      id: string;
+      titulo: string;
+      direccionTexto: string | null;
+      fechaInicio: string;
+      lat: number | null;
+      lng: number | null;
+      distanciaM: number;
+    }>
+  > {
+    const { lat, lng } = nearbyDto;
+    const metros = nearbyDto.metros ?? 100;
+
+    if (lat === undefined || lng === undefined) {
+      throw new BadRequestException('lat y lng son requeridos');
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+    const rows = await this.eventoRepository.query(
+      `
+      SELECT 
+        id,
+        titulo,
+        direccion_texto AS "direccionTexto",
+        to_char(fecha_inicio, 'YYYY-MM-DD"T"HH24:MI:SS.MSZ') AS "fechaInicio",
+        lat,
+        lng,
+        ST_Distance(geom::geography, ST_SetSRID(ST_MakePoint($2, $1), 4326)::geography) AS distancia_m
+      FROM eventos
+      WHERE active = true
+        AND geom IS NOT NULL
+        AND ST_DWithin(geom::geography, ST_SetSRID(ST_MakePoint($2, $1), 4326)::geography, $3)
+      ORDER BY distancia_m ASC
+      LIMIT 100
+      `,
+      [lat, lng, metros],
+    );
+
+    return rows.map((r: any) => ({
+      id: r.id,
+      titulo: r.titulo,
+      direccionTexto: r.direccionTexto ?? null,
+      fechaInicio: r.fechaInicio,
+      lat: r.lat ?? null,
+      lng: r.lng ?? null,
+      distanciaM: Number(r.distancia_m),
+    }));
+  }
+  /* eslint-enable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-return */
 
   async findAll(): Promise<PublicEventoDto[]> {
     const eventos = await this.eventoRepository.find({
