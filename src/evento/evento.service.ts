@@ -75,6 +75,7 @@ export class EventoService {
     evento.status = createEventoDto.status || EventStatus.DRAFT;
     // Siempre iniciar como inactivo
     evento.active = false;
+    evento.isRecurrent = createEventoDto.isRecurrent !== undefined ? createEventoDto.isRecurrent : false;
 
     // Guardar el evento
     const savedEvento = await this.eventoRepository.save(evento);
@@ -196,6 +197,7 @@ export class EventoService {
       enlaceExterno: evento.enlaceExterno,
       status: evento.status,
       active: evento.active,
+      isRecurrent: evento.isRecurrent,
       categorias: evento.eventoCategorias.map((ec) => ({
         nombre: ec.categoria.nombre,
         descripcion: ec.categoria.descripcion,
@@ -244,6 +246,7 @@ export class EventoService {
       precio: evento.precio,
       enlaceExterno: evento.enlaceExterno,
       status: evento.status,
+      isRecurrent: evento.isRecurrent,
       categorias: evento.eventoCategorias.map((ec) => ({
         nombre: ec.categoria.nombre,
         descripcion: ec.categoria.descripcion,
@@ -285,6 +288,7 @@ export class EventoService {
         direccionTexto: evento.direccionTexto,
         precio: evento.precio,
         active: evento.active,
+        isRecurrent: evento.isRecurrent,
         categoriaIds: evento.eventoCategorias.map((ec) => ({
           id: ec.categoria.id,
           nombre: ec.categoria.nombre,
@@ -375,6 +379,9 @@ export class EventoService {
     if (updateEventoDto.active !== undefined) {
       eventoToUpdate.active = updateEventoDto.active;
     }
+    if (updateEventoDto.isRecurrent !== undefined) {
+      eventoToUpdate.isRecurrent = updateEventoDto.isRecurrent;
+    }
 
     // Guardar el evento actualizado
     await this.eventoRepository.save(eventoToUpdate);
@@ -438,6 +445,7 @@ export class EventoService {
       direccionTexto: updatedEvento.direccionTexto,
       precio: updatedEvento.precio,
       active: updatedEvento.active,
+      isRecurrent: updatedEvento.isRecurrent,
       categoriaIds: updatedEvento.eventoCategorias.map((ec) => {
         return {
           id: ec.categoria.id,

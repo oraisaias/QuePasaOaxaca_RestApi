@@ -5,6 +5,7 @@ export class CmsEventoDto {
   direccionTexto?: string;
   precio?: number;
   active: boolean;
+  isRecurrent: boolean;
   categoriaIds: {
     id: string;
     nombre: string;

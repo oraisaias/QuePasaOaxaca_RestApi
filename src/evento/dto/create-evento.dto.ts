@@ -8,6 +8,7 @@ import {
   IsEnum,
   MinLength,
   IsNotEmpty,
+  IsBoolean,
 } from 'class-validator';
 import { EventStatus } from '../entities/evento.entity';
 
@@ -60,4 +61,8 @@ export class CreateEventoDto {
   @IsArray()
   @IsUUID('4', { each: true })
   categoriaIds: string[];
+
+  @IsBoolean()
+  @IsOptional()
+  isRecurrent?: boolean;
 }

@@ -14,6 +14,7 @@ export class PublicEventoDto {
   enlaceExterno?: string;
   status: EventStatus;
   active: boolean;
+  isRecurrent: boolean;
   categorias: {
     nombre: string;
     descripcion?: string;

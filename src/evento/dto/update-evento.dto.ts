@@ -14,4 +14,5 @@ export class UpdateEventoDto {
   status?: EventStatus;
   categoriaIds?: string[];
   active?: boolean;
+  isRecurrent?: boolean;
 }
