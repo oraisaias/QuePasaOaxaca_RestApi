@@ -71,6 +71,7 @@ export class EventoService {
     if (createEventoDto.enlaceExterno)
       evento.enlaceExterno = createEventoDto.enlaceExterno;
     evento.status = createEventoDto.status || EventStatus.DRAFT;
+    evento.active = createEventoDto.active !== undefined ? createEventoDto.active : false;
 
     // Guardar el evento
     const savedEvento = await this.eventoRepository.save(evento);
@@ -97,6 +98,7 @@ export class EventoService {
 
   async findAll(): Promise<PublicEventoDto[]> {
     const eventos = await this.eventoRepository.find({
+      where: { active: true }, // Solo eventos activos para la app
       select: [
         'id',
         'titulo',
@@ -110,6 +112,7 @@ export class EventoService {
         'precio',
         'enlaceExterno',
         'status',
+        'active',
         'createdBy',
       ],
       relations: ['eventoCategorias', 'eventoCategorias.categoria'],
@@ -129,6 +132,7 @@ export class EventoService {
       precio: evento.precio,
       enlaceExterno: evento.enlaceExterno,
       status: evento.status,
+      active: evento.active,
       categorias: evento.eventoCategorias.map((ec) => ({
         nombre: ec.categoria.nombre,
         descripcion: ec.categoria.descripcion,
@@ -153,6 +157,7 @@ export class EventoService {
         'precio',
         'enlaceExterno',
         'status',
+        'active',
         'createdBy',
       ],
       relations: ['eventoCategorias', 'eventoCategorias.categoria'],
@@ -169,6 +174,7 @@ export class EventoService {
       imagenUrl: evento.imagenUrl,
       fechaInicio: evento.fechaInicio,
       fechaFin: evento.fechaFin,
+      active: evento.active,
       lat: evento.lat,
       lng: evento.lng,
       direccionTexto: evento.direccionTexto,
@@ -195,6 +201,7 @@ export class EventoService {
         'fechaInicio',
         'direccionTexto',
         'precio',
+        'active',
         'createdAt',
       ],
       relations: ['eventoCategorias', 'eventoCategorias.categoria'],
@@ -214,6 +221,7 @@ export class EventoService {
         fechaInicio: evento.fechaInicio.toISOString(),
         direccionTexto: evento.direccionTexto,
         precio: evento.precio,
+        active: evento.active,
         categoriaIds: evento.eventoCategorias.map((ec) => ({
           id: ec.categoria.id,
           nombre: ec.categoria.nombre,
@@ -301,6 +309,9 @@ export class EventoService {
     if (updateEventoDto.status !== undefined) {
       eventoToUpdate.status = updateEventoDto.status;
     }
+    if (updateEventoDto.active !== undefined) {
+      eventoToUpdate.active = updateEventoDto.active;
+    }
 
     // Guardar el evento actualizado
     await this.eventoRepository.save(eventoToUpdate);
@@ -342,6 +353,7 @@ export class EventoService {
       fechaInicio: updatedEvento.fechaInicio.toISOString(),
       direccionTexto: updatedEvento.direccionTexto,
       precio: updatedEvento.precio,
+      active: updatedEvento.active,
       categoriaIds: updatedEvento.eventoCategorias.map((ec) => {
         return {
           id: ec.categoria.id,

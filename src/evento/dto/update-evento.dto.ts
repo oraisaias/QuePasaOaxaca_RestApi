@@ -13,4 +13,5 @@ export class UpdateEventoDto {
   enlaceExterno?: string;
   status?: EventStatus;
   categoriaIds?: string[];
+  active?: boolean;
 }

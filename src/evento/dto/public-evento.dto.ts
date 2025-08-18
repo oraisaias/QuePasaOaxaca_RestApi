@@ -13,6 +13,7 @@ export class PublicEventoDto {
   precio?: number;
   enlaceExterno?: string;
   status: EventStatus;
+  active: boolean;
   categorias: {
     nombre: string;
     descripcion?: string;

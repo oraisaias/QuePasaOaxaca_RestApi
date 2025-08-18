@@ -62,6 +62,9 @@ export class Evento {
   })
   status: EventStatus;
 
+  @Column({ default: false })
+  active: boolean;
+
   @Column({ name: 'created_by', nullable: true })
   createdBy: string;
 
