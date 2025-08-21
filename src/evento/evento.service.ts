@@ -75,7 +75,10 @@ export class EventoService {
     evento.status = createEventoDto.status || EventStatus.DRAFT;
     // Siempre iniciar como inactivo
     evento.active = false;
-    evento.isRecurrent = createEventoDto.isRecurrent !== undefined ? createEventoDto.isRecurrent : false;
+    evento.isRecurrent =
+      createEventoDto.isRecurrent !== undefined
+        ? createEventoDto.isRecurrent
+        : false;
 
     // Guardar el evento
     const savedEvento = await this.eventoRepository.save(evento);
@@ -223,6 +226,7 @@ export class EventoService {
         'enlaceExterno',
         'status',
         'active',
+        'isRecurrent',
         'createdBy',
       ],
       relations: ['eventoCategorias', 'eventoCategorias.categoria'],
@@ -268,6 +272,7 @@ export class EventoService {
         'direccionTexto',
         'precio',
         'active',
+        'isRecurrent',
         'createdAt',
       ],
       relations: ['eventoCategorias', 'eventoCategorias.categoria'],
