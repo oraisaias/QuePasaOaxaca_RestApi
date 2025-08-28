@@ -4,7 +4,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, In } from 'typeorm';
 import { Evento, EventStatus } from './entities/evento.entity';
 import { EventoCategoria } from './entities/evento-categoria.entity';
 import { Categoria } from '../categoria/entities/categoria.entity';
@@ -72,7 +72,7 @@ export class EventoService {
       evento.precio = createEventoDto.precio;
     if (createEventoDto.enlaceExterno)
       evento.enlaceExterno = createEventoDto.enlaceExterno;
-    evento.status = createEventoDto.status || EventStatus.DRAFT;
+    evento.status = EventStatus.DRAFT;
     // Siempre iniciar como inactivo
     evento.active = false;
     evento.isRecurrent =
@@ -144,6 +144,7 @@ export class EventoService {
       FROM eventos
       WHERE active = true
         AND geom IS NOT NULL
+        AND status IN ('published', 'expired')
         AND ST_DWithin(geom::geography, ST_SetSRID(ST_MakePoint($2, $1), 4326)::geography, $3)
       ORDER BY distancia_m ASC
       LIMIT 100
@@ -165,7 +166,10 @@ export class EventoService {
 
   async findAll(): Promise<PublicEventoDto[]> {
     const eventos = await this.eventoRepository.find({
-      where: { active: true }, // Solo eventos activos para la app
+      where: {
+        active: true,
+        status: In([EventStatus.PUBLISHED, EventStatus.EXPIRED]),
+      }, // Solo eventos activos y publicados/expirados para la app
       select: [
         'id',
         'titulo',
@@ -211,7 +215,10 @@ export class EventoService {
   async findByEventId(eventId: string): Promise<PublicEventoDto> {
     // Buscar el evento por su ID directo
     const evento = await this.eventoRepository.findOne({
-      where: { id: eventId },
+      where: {
+        id: eventId,
+        status: In([EventStatus.PUBLISHED, EventStatus.EXPIRED]),
+      },
       select: [
         'id',
         'titulo',
@@ -233,7 +240,9 @@ export class EventoService {
     });
 
     if (!evento) {
-      throw new NotFoundException('Evento no encontrado');
+      throw new NotFoundException(
+        'Evento no encontrado o no está publicado/expirado',
+      );
     }
 
     return {
@@ -271,6 +280,7 @@ export class EventoService {
         'fechaInicio',
         'direccionTexto',
         'precio',
+        'status',
         'active',
         'isRecurrent',
         'createdAt',
@@ -288,6 +298,7 @@ export class EventoService {
     return {
       data: eventos.map((evento) => ({
         id: evento.id,
+        status: evento.status,
         titulo: evento.titulo,
         fechaInicio: evento.fechaInicio.toISOString(),
         direccionTexto: evento.direccionTexto,
@@ -448,6 +459,7 @@ export class EventoService {
       titulo: updatedEvento.titulo,
       fechaInicio: updatedEvento.fechaInicio.toISOString(),
       direccionTexto: updatedEvento.direccionTexto,
+      status: updatedEvento.status,
       precio: updatedEvento.precio,
       active: updatedEvento.active,
       isRecurrent: updatedEvento.isRecurrent,

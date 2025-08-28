@@ -1,3 +1,5 @@
+import { EventStatus } from '../entities/evento.entity';
+
 export class CmsEventoDto {
   id: string;
   titulo: string;
@@ -6,6 +8,7 @@ export class CmsEventoDto {
   precio?: number;
   active: boolean;
   isRecurrent: boolean;
+  status: EventStatus;
   categoriaIds: {
     id: string;
     nombre: string;
