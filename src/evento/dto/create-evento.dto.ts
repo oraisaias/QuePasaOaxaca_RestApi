@@ -5,12 +5,10 @@ import {
   IsNumber,
   IsArray,
   IsUUID,
-  IsEnum,
   MinLength,
   IsNotEmpty,
   IsBoolean,
 } from 'class-validator';
-import { EventStatus } from '../entities/evento.entity';
 
 export class CreateEventoDto {
   @IsString()
@@ -53,10 +51,6 @@ export class CreateEventoDto {
   @IsString()
   @IsOptional()
   enlaceExterno?: string;
-
-  @IsEnum(EventStatus)
-  @IsOptional()
-  status?: EventStatus;
 
   @IsArray()
   @IsUUID('4', { each: true })

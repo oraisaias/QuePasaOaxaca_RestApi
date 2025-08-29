@@ -11,6 +11,7 @@ import { Categoria } from '../categoria/entities/categoria.entity';
 import { CreateEventoDto } from './dto/create-evento.dto';
 import { UpdateEventoDto } from './dto/update-evento.dto';
 import { UpdateActiveDto } from './dto/update-active.dto';
+import { UpdateStatusDto } from './dto/update-status.dto';
 import { CmsEventoDto } from './dto/cms-evento.dto';
 import { PaginationDto } from './dto/pagination.dto';
 import { PaginatedResponseDto } from './dto/paginated-response.dto';
@@ -112,7 +113,10 @@ export class EventoService {
   }
 
   /* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-return */
-  async findNearbyActive(nearbyDto: NearbyEventosDto): Promise<
+  async findNearbyActive(
+    nearbyDto: NearbyEventosDto,
+    userRole?: string,
+  ): Promise<
     Array<{
       id: string;
       titulo: string;
@@ -130,6 +134,15 @@ export class EventoService {
       throw new BadRequestException('lat y lng son requeridos');
     }
 
+    // Construir la consulta SQL según el rol
+    let whereClause = 'active = true AND geom IS NOT NULL';
+    const queryParams = [lat, lng, metros];
+
+    // Si no es admin, aplicar filtros de status
+    if (userRole !== 'admin') {
+      whereClause += " AND status IN ('published', 'expired')";
+    }
+
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     const rows = await this.eventoRepository.query(
       `
@@ -142,14 +155,12 @@ export class EventoService {
         lng,
         ST_Distance(geom::geography, ST_SetSRID(ST_MakePoint($2, $1), 4326)::geography) AS distancia_m
       FROM eventos
-      WHERE active = true
-        AND geom IS NOT NULL
-        AND status IN ('published', 'expired')
+      WHERE ${whereClause}
         AND ST_DWithin(geom::geography, ST_SetSRID(ST_MakePoint($2, $1), 4326)::geography, $3)
       ORDER BY distancia_m ASC
       LIMIT 100
       `,
-      [lat, lng, metros],
+      queryParams,
     );
 
     return rows.map((r: any) => ({
@@ -164,12 +175,18 @@ export class EventoService {
   }
   /* eslint-enable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-return */
 
-  async findAll(): Promise<PublicEventoDto[]> {
+  async findAll(userRole?: string): Promise<PublicEventoDto[]> {
+    // Construir condiciones de búsqueda según el rol
+    const whereConditions: { active?: boolean; status?: any } = {};
+
+    // Si no es admin, aplicar filtros de status y active
+    if (userRole !== 'admin') {
+      whereConditions.active = true;
+      whereConditions.status = In([EventStatus.PUBLISHED, EventStatus.EXPIRED]);
+    }
+
     const eventos = await this.eventoRepository.find({
-      where: {
-        active: true,
-        status: In([EventStatus.PUBLISHED, EventStatus.EXPIRED]),
-      }, // Solo eventos activos y publicados/expirados para la app
+      where: whereConditions, // Solo eventos activos y publicados/expirados para la app
       select: [
         'id',
         'titulo',
@@ -190,6 +207,9 @@ export class EventoService {
     });
 
     // Transformar a la estructura deseada con ID directo
+    if (eventos.length === 0) {
+      return [];
+    }
     return eventos.map((evento) => ({
       id: evento.id,
       titulo: evento.titulo,
@@ -212,13 +232,24 @@ export class EventoService {
     }));
   }
 
-  async findByEventId(eventId: string): Promise<PublicEventoDto> {
+  async findByEventId(
+    eventId: string,
+    userRole?: string,
+  ): Promise<PublicEventoDto> {
+    // Construir condiciones de búsqueda según el rol
+    const whereConditions: { id: string; status?: any; active?: boolean } = {
+      id: eventId,
+    };
+
+    // Si no es admin, aplicar filtros de status y active
+    if (userRole !== 'admin') {
+      whereConditions.status = In([EventStatus.PUBLISHED, EventStatus.EXPIRED]);
+      whereConditions.active = true;
+    }
+
     // Buscar el evento por su ID directo
     const evento = await this.eventoRepository.findOne({
-      where: {
-        id: eventId,
-        status: In([EventStatus.PUBLISHED, EventStatus.EXPIRED]),
-      },
+      where: whereConditions,
       select: [
         'id',
         'titulo',
@@ -240,9 +271,11 @@ export class EventoService {
     });
 
     if (!evento) {
-      throw new NotFoundException(
-        'Evento no encontrado o no está publicado/expirado',
-      );
+      const errorMessage =
+        userRole === 'admin'
+          ? 'Evento no encontrado'
+          : 'Evento no encontrado o no está disponible públicamente';
+      throw new NotFoundException(errorMessage);
     }
 
     return {
@@ -489,6 +522,27 @@ export class EventoService {
 
     return {
       message: `Evento ${updateActiveDto.active ? 'activado' : 'desactivado'} exitosamente`,
+    };
+  }
+
+  async updateStatus(
+    id: string,
+    updateStatusDto: UpdateStatusDto,
+  ): Promise<{ message: string; status: EventStatus }> {
+    const evento = await this.eventoRepository.findOne({
+      where: { id },
+      select: ['id', 'status'],
+    });
+
+    if (!evento) {
+      throw new NotFoundException('Evento no encontrado');
+    }
+
+    await this.eventoRepository.update(id, { status: updateStatusDto.status });
+
+    return {
+      message: `Status del evento actualizado exitosamente a ${updateStatusDto.status}`,
+      status: updateStatusDto.status,
     };
   }
 }

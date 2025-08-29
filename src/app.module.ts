@@ -10,6 +10,8 @@ import { FavoriteModule } from './favorite/favorite.module';
 import { AuthModule } from './auth/auth.module';
 import { OpenaiModule } from './openai/openai.module';
 import { User } from './user/entities/user.entity';
+import { Role } from './user/entities/role.entity';
+import { BannedUser } from './user/entities/banned-user.entity';
 import { Categoria } from './categoria/entities/categoria.entity';
 import { Evento } from './evento/entities/evento.entity';
 import { EventoCategoria } from './evento/entities/evento-categoria.entity';
@@ -25,6 +27,8 @@ const DBModule = TypeOrmModule.forRoot({
   database: 'postgres',
   entities: [
     User,
+    Role,
+    BannedUser,
     Categoria,
     Evento,
     EventoCategoria,

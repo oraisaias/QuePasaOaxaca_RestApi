@@ -5,33 +5,33 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
   OneToMany,
+  ManyToOne,
+  JoinColumn,
 } from 'typeorm';
 import { Evento } from '../../evento/entities/evento.entity';
 import { UserFavorite } from '../../favorite/entities/user-favorite.entity';
-
-export enum UserRole {
-  ADMIN = 'admin',
-  USER = 'user',
-}
+import { Role } from './role.entity';
 
 @Entity('users')
 export class User {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column({ type: 'citext', unique: true })
+  @Column({ type: 'citext', unique: true, nullable: true })
   email: string;
 
-  @Column({ name: 'password_hash' })
+  @Column({ name: 'password_hash', nullable: true })
   passwordHash: string;
 
-  @Column({
-    type: 'enum',
-    enum: UserRole,
-    enumName: 'user_role',
-    default: UserRole.ADMIN,
-  })
-  role: UserRole;
+  @Column({ name: 'device_id', unique: true, nullable: true })
+  deviceId: string;
+
+  @Column({ name: 'role_id' })
+  roleId: string;
+
+  @ManyToOne(() => Role, { eager: true })
+  @JoinColumn({ name: 'role_id' })
+  role: Role;
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
