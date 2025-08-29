@@ -12,6 +12,7 @@ import { CategoriaService } from './categoria.service';
 import { CreateCategoriaDto } from './dto/create-categoria.dto';
 import { UpdateCategoriaDto } from './dto/update-categoria.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { CategoriaAuthGuard } from '../auth/guards/categoria-auth.guard';
 
 @Controller('categorias')
 export class CategoriaController {
@@ -24,6 +25,7 @@ export class CategoriaController {
   }
 
   @Get()
+  @UseGuards(CategoriaAuthGuard)
   async findAll() {
     return this.categoriaService.findAll();
   }
