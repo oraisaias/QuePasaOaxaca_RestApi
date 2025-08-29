@@ -545,4 +545,23 @@ export class EventoService {
       status: updateStatusDto.status,
     };
   }
+
+  getAvailableStatuses(): Array<{ value: EventStatus }> {
+    const statuses = [
+      {
+        value: EventStatus.DRAFT,
+      },
+      {
+        value: EventStatus.PUBLISHED,
+      },
+      {
+        value: EventStatus.ARCHIVED,
+      },
+      {
+        value: EventStatus.EXPIRED,
+      },
+    ];
+
+    return statuses;
+  }
 }

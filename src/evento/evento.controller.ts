@@ -14,6 +14,7 @@ import { EventoService } from './evento.service';
 import { CreateEventoDto } from './dto/create-evento.dto';
 import { UpdateEventoDto } from './dto/update-evento.dto';
 import { UpdateActiveDto } from './dto/update-active.dto';
+import { UpdateStatusDto } from './dto/update-status.dto';
 import { NearbyEventosDto } from './dto/nearby-eventos.dto';
 import { PaginationDto } from './dto/pagination.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -66,6 +67,12 @@ export class EventoController {
     return this.eventoService.findAllForCms(paginationDto);
   }
 
+  @Get('cms/statuses')
+  @UseGuards(CmsAuthGuard)
+  getAvailableStatuses() {
+    return this.eventoService.getAvailableStatuses();
+  }
+
   @Get(':id')
   @UseGuards(AppAuthGuard)
   async findOne(@Param('id') id: string, @Req() request: AuthenticatedRequest) {
@@ -100,5 +107,15 @@ export class EventoController {
   ) {
     console.log('updateActive', id, updateActiveDto);
     return this.eventoService.updateActive(id, updateActiveDto);
+  }
+
+  @Patch('cms/:id/status')
+  @UseGuards(CmsAuthGuard)
+  async updateStatus(
+    @Param('id') id: string,
+    @Body() updateStatusDto: UpdateStatusDto,
+  ) {
+    console.log('updateStatus', id, updateStatusDto);
+    return this.eventoService.updateStatus(id, updateStatusDto);
   }
 }
