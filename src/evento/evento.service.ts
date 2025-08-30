@@ -12,11 +12,40 @@ import { CreateEventoDto } from './dto/create-evento.dto';
 import { UpdateEventoDto } from './dto/update-evento.dto';
 import { UpdateActiveDto } from './dto/update-active.dto';
 import { UpdateStatusDto } from './dto/update-status.dto';
+import {
+  NearbyEventoResponseDto,
+  NearbyResponseDto,
+} from './dto/nearby-response.dto';
 import { CmsEventoDto } from './dto/cms-evento.dto';
 import { PaginationDto } from './dto/pagination.dto';
 import { PaginatedResponseDto } from './dto/paginated-response.dto';
 import { PublicEventoDto } from './dto/public-evento.dto';
-import { NearbyEventosDto } from './dto/nearby-eventos.dto';
+import {
+  NearbyEventosDto,
+  Suggestion,
+  TimeFilter,
+} from './dto/nearby-eventos.dto';
+
+interface EventoRow {
+  id: string;
+  titulo: string;
+  descripcion: string;
+  imagenUrl: string;
+  fechaInicio: string;
+  fechaFin: string;
+  lat: number;
+  lng: number;
+  direccionTexto: string;
+  precio: number;
+  enlaceExterno: string;
+  distancia_m: number;
+}
+
+interface CategoriaRow {
+  evento_id: string;
+  id: string;
+  nombre: string;
+}
 
 @Injectable()
 export class EventoService {
@@ -112,68 +141,224 @@ export class EventoService {
     return savedEvento;
   }
 
-  /* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-return */
   async findNearbyActive(
     nearbyDto: NearbyEventosDto,
     userRole?: string,
-  ): Promise<
-    Array<{
-      id: string;
-      titulo: string;
-      direccionTexto: string | null;
-      fechaInicio: string;
-      lat: number | null;
-      lng: number | null;
-      distanciaM: number;
-    }>
-  > {
-    const { lat, lng } = nearbyDto;
-    const metros = nearbyDto.metros ?? 100;
+  ): Promise<NearbyResponseDto> {
+    const {
+      lat,
+      lng,
+      searchQuery,
+      categories,
+      time,
+      proximity = 5000,
+      sortBy = 'proximity',
+      suggestion,
+      page = 1,
+      limit = 20,
+    } = nearbyDto;
 
-    if (lat === undefined || lng === undefined) {
-      throw new BadRequestException('lat y lng son requeridos');
+    const hasLocation = lat !== undefined && lng !== undefined;
+
+    // Aplicar sugerencias si están presentes y hay ubicación
+    let finalProximity = proximity;
+    let finalSortBy = sortBy;
+
+    if (suggestion && hasLocation) {
+      switch (suggestion) {
+        case Suggestion.NEAR_ME:
+          finalProximity = 3000;
+          break;
+        case Suggestion.CENTER:
+          finalProximity = 10000;
+          finalSortBy = 'proximity';
+          break;
+        case Suggestion.POPULAR:
+          finalSortBy = 'time';
+          break;
+        case Suggestion.NEW:
+          finalSortBy = 'time';
+          break;
+      }
     }
 
-    // Construir la consulta SQL según el rol
-    let whereClause = 'active = true AND geom IS NOT NULL';
-    const queryParams = [lat, lng, metros];
+    // Si no hay ubicación, forzar ordenamiento por tiempo
+    if (!hasLocation) {
+      finalSortBy = 'time';
+    }
+
+    // Construir condiciones base
+    let whereConditions = 'active = true';
+    const queryParams: any[] = [];
+
+    // Agregar condición de geometría solo si hay ubicación
+    if (hasLocation) {
+      whereConditions += ' AND geom IS NOT NULL';
+      queryParams.push(lat, lng, finalProximity);
+    }
 
     // Si no es admin, aplicar filtros de status
     if (userRole !== 'admin') {
-      whereClause += " AND status IN ('published', 'expired')";
+      whereConditions += " AND status IN ('published', 'expired')";
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-    const rows = await this.eventoRepository.query(
-      `
-      SELECT 
-        id,
-        titulo,
-        direccion_texto AS "direccionTexto",
-        to_char(fecha_inicio, 'YYYY-MM-DD"T"HH24:MI:SS.MSZ') AS "fechaInicio",
-        lat,
-        lng,
-        ST_Distance(geom::geography, ST_SetSRID(ST_MakePoint($2, $1), 4326)::geography) AS distancia_m
-      FROM eventos
-      WHERE ${whereClause}
-        AND ST_DWithin(geom::geography, ST_SetSRID(ST_MakePoint($2, $1), 4326)::geography, $3)
-      ORDER BY distancia_m ASC
-      LIMIT 100
-      `,
+    // Filtro por categorías
+    if (categories && categories.length > 0) {
+      const categoryPlaceholders = categories
+        .map((_, index) => `$${queryParams.length + index + 1}`)
+        .join(',');
+      whereConditions += ` AND id IN (
+        SELECT DISTINCT evento_id 
+        FROM evento_categorias 
+        WHERE categoria_id IN (${categoryPlaceholders})
+      )`;
+      queryParams.push(...categories);
+    }
+
+    // Filtro por tiempo
+    if (time) {
+      const now = new Date();
+      let timeCondition = '';
+      switch (time) {
+        case TimeFilter.TODAY:
+          timeCondition = `AND DATE(fecha_inicio) = DATE(NOW())`;
+          break;
+        case TimeFilter.THIS_WEEKEND:
+          timeCondition = `AND EXTRACT(DOW FROM fecha_inicio) IN (0, 6) AND fecha_inicio >= NOW()`;
+          break;
+        case TimeFilter.NEXT_WEEK:
+          timeCondition = `AND fecha_inicio BETWEEN NOW() AND '${new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000).toISOString()}'`;
+          break;
+      }
+      whereConditions += ` ${timeCondition}`;
+    }
+
+    // Filtro por búsqueda de texto
+    if (searchQuery && searchQuery.trim()) {
+      whereConditions += ` AND (titulo ILIKE $${queryParams.length + 1} OR descripcion ILIKE $${queryParams.length + 1})`;
+      queryParams.push(`%${searchQuery.trim()}%`);
+    }
+
+    // Ordenamiento
+    let orderClause = 'ORDER BY fecha_inicio ASC';
+    if (finalSortBy === 'proximity' && hasLocation) {
+      orderClause = 'ORDER BY distancia_m ASC';
+    }
+
+    // Paginación
+    const offset = (page - 1) * limit;
+
+    // Consulta principal
+    const selectFields = hasLocation
+      ? `e.id, e.titulo, e.descripcion, e.imagen_url AS "imagenUrl", to_char(e.fecha_inicio, 'YYYY-MM-DD"T"HH24:MI:SS.MSZ') AS "fechaInicio", to_char(e.fecha_fin, 'YYYY-MM-DD"T"HH24:MI:SS.MSZ') AS "fechaFin", e.lat, e.lng, e.direccion_texto AS "direccionTexto", e.precio, e.enlace_externo AS "enlaceExterno", ST_Distance(e.geom::geography, ST_SetSRID(ST_MakePoint($2, $1), 4326)::geography) AS distancia_m`
+      : `e.id, e.titulo, e.descripcion, e.imagen_url AS "imagenUrl", to_char(e.fecha_inicio, 'YYYY-MM-DD"T"HH24:MI:SS.MSZ') AS "fechaInicio", to_char(e.fecha_fin, 'YYYY-MM-DD"T"HH24:MI:SS.MSZ') AS "fechaFin", e.lat, e.lng, e.direccion_texto AS "direccionTexto", e.precio, e.enlace_externo AS "enlaceExterno"`;
+
+    const proximityCondition = hasLocation
+      ? `AND ST_DWithin(e.geom::geography, ST_SetSRID(ST_MakePoint($2, $1), 4326)::geography, $3)`
+      : '';
+
+    const query = `
+      SELECT ${selectFields}
+      FROM eventos e
+      WHERE ${whereConditions}
+        ${proximityCondition}
+      ${orderClause}
+      LIMIT ${limit} OFFSET ${offset}
+    `;
+
+    // Consulta para contar total
+    const countQuery = `
+      SELECT COUNT(*) as total
+      FROM eventos e
+      WHERE ${whereConditions}
+        ${proximityCondition}
+    `;
+
+    const rows: EventoRow[] = await this.eventoRepository.query(
+      query,
+      queryParams,
+    );
+    const countResult: { total: string }[] = await this.eventoRepository.query(
+      countQuery,
       queryParams,
     );
 
-    return rows.map((r: any) => ({
+    const total: number = parseInt(countResult[0].total);
+    const totalPages = Math.ceil(total / limit);
+
+    // Obtener categorías para cada evento
+    const eventIds = rows.map((r: EventoRow) => r.id);
+    let categoriasMap: { [key: string]: any[] } = {};
+
+    if (eventIds.length > 0) {
+      const categoriasQuery = `
+        SELECT 
+          ec.evento_id,
+          c.id,
+          c.nombre
+        FROM evento_categorias ec
+        JOIN categorias c ON ec.categoria_id = c.id
+        WHERE ec.evento_id IN (${eventIds.map((_, i) => `$${i + 1}`).join(',')})
+      `;
+
+      const categoriasRows: CategoriaRow[] = await this.eventoRepository.query(
+        categoriasQuery,
+        eventIds,
+      );
+
+      categoriasMap = categoriasRows.reduce(
+        (acc: { [key: string]: CategoriaRow[] }, row: CategoriaRow) => {
+          if (!acc[row.evento_id]) {
+            acc[row.evento_id] = [];
+          }
+          acc[row.evento_id].push({
+            id: row.id,
+            nombre: row.nombre,
+            evento_id: row.evento_id,
+          });
+          return acc;
+        },
+        {},
+      );
+    }
+
+    // Construir respuesta
+    const data: NearbyEventoResponseDto[] = rows.map((r: EventoRow) => ({
       id: r.id,
       titulo: r.titulo,
-      direccionTexto: r.direccionTexto ?? null,
+      descripcion: r.descripcion,
+      imagenUrl: r.imagenUrl,
       fechaInicio: r.fechaInicio,
-      lat: r.lat ?? null,
-      lng: r.lng ?? null,
-      distanciaM: Number(r.distancia_m),
+      fechaFin: r.fechaFin,
+      lat: r.lat,
+      lng: r.lng,
+      direccionTexto: r.direccionTexto,
+      precio: r.precio,
+      enlaceExterno: r.enlaceExterno,
+      distance: hasLocation ? Math.round(Number(r.distancia_m)) : undefined,
+      categorias: categoriasMap[r.id] || [],
     }));
+
+    return {
+      data,
+      pagination: {
+        total,
+        page,
+        limit,
+        totalPages,
+        hasNext: page < totalPages,
+        hasPrev: page > 1,
+      },
+      filters: {
+        applied: {
+          categories: categories?.length || 0,
+          time: time || undefined,
+          proximity: finalProximity,
+          sortBy: finalSortBy,
+        },
+      },
+    };
   }
-  /* eslint-enable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-return */
 
   async findAll(userRole?: string): Promise<PublicEventoDto[]> {
     // Construir condiciones de búsqueda según el rol
