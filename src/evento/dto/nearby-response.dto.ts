@@ -2,14 +2,9 @@ export class NearbyEventoResponseDto {
   id: string;
   titulo: string;
   descripcion?: string;
-  imagenUrl?: string;
   fechaInicio: string;
-  fechaFin?: string;
-  lat?: number;
-  lng?: number;
   direccionTexto?: string;
   precio?: number;
-  enlaceExterno?: string;
   distance?: number;
   categorias: Array<{
     id: string;

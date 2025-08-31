@@ -4,7 +4,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, In } from 'typeorm';
+import { Repository, In, DataSource } from 'typeorm';
 import { Evento, EventStatus } from './entities/evento.entity';
 import { EventoCategoria } from './entities/evento-categoria.entity';
 import { Categoria } from '../categoria/entities/categoria.entity';
@@ -25,6 +25,13 @@ import {
   Suggestion,
   TimeFilter,
 } from './dto/nearby-eventos.dto';
+import {
+  FilteredEventsDto,
+  FilteredEventResponseDto,
+  DateFilter,
+  DistanceFilter,
+} from './dto/filtered-events.dto';
+import { FindEventDto } from './dto/find-event.dto';
 
 interface EventoRow {
   id: string;
@@ -56,6 +63,7 @@ export class EventoService {
     private eventoCategoriaRepository: Repository<EventoCategoria>,
     @InjectRepository(Categoria)
     private categoriaRepository: Repository<Categoria>,
+    private dataSource: DataSource,
   ) {}
 
   async create(createEventoDto: CreateEventoDto): Promise<Evento> {
@@ -250,8 +258,8 @@ export class EventoService {
 
     // Consulta principal
     const selectFields = hasLocation
-      ? `e.id, e.titulo, e.descripcion, e.imagen_url AS "imagenUrl", to_char(e.fecha_inicio, 'YYYY-MM-DD"T"HH24:MI:SS.MSZ') AS "fechaInicio", to_char(e.fecha_fin, 'YYYY-MM-DD"T"HH24:MI:SS.MSZ') AS "fechaFin", e.lat, e.lng, e.direccion_texto AS "direccionTexto", e.precio, e.enlace_externo AS "enlaceExterno", ST_Distance(e.geom::geography, ST_SetSRID(ST_MakePoint($2, $1), 4326)::geography) AS distancia_m`
-      : `e.id, e.titulo, e.descripcion, e.imagen_url AS "imagenUrl", to_char(e.fecha_inicio, 'YYYY-MM-DD"T"HH24:MI:SS.MSZ') AS "fechaInicio", to_char(e.fecha_fin, 'YYYY-MM-DD"T"HH24:MI:SS.MSZ') AS "fechaFin", e.lat, e.lng, e.direccion_texto AS "direccionTexto", e.precio, e.enlace_externo AS "enlaceExterno"`;
+      ? `e.id, e.titulo, e.descripcion, e.imagen_url AS "imagenUrl", to_char(e.fecha_inicio, 'YYYY-MM-DD"T"HH24:MI:SS.MSZ') AS "fechaInicio", to_char(e.fecha_fin, 'YYYY-MM-DD"T"HH24:MI:SS.MSZ') AS "fechaFin", e.direccion_texto AS "direccionTexto", e.precio, ST_Distance(e.geom::geography, ST_SetSRID(ST_MakePoint($2, $1), 4326)::geography) AS distancia_m`
+      : `e.id, e.titulo, e.descripcion, e.imagen_url AS "imagenUrl", to_char(e.fecha_inicio, 'YYYY-MM-DD"T"HH24:MI:SS.MSZ') AS "fechaInicio", to_char(e.fecha_fin, 'YYYY-MM-DD"T"HH24:MI:SS.MSZ') AS "fechaFin", e.direccion_texto AS "direccionTexto", e.precio`;
 
     const proximityCondition = hasLocation
       ? `AND ST_DWithin(e.geom::geography, ST_SetSRID(ST_MakePoint($2, $1), 4326)::geography, $3)`
@@ -323,21 +331,24 @@ export class EventoService {
     }
 
     // Construir respuesta
-    const data: NearbyEventoResponseDto[] = rows.map((r: EventoRow) => ({
-      id: r.id,
-      titulo: r.titulo,
-      descripcion: r.descripcion,
-      imagenUrl: r.imagenUrl,
-      fechaInicio: r.fechaInicio,
-      fechaFin: r.fechaFin,
-      lat: r.lat,
-      lng: r.lng,
-      direccionTexto: r.direccionTexto,
-      precio: r.precio,
-      enlaceExterno: r.enlaceExterno,
-      distance: hasLocation ? Math.round(Number(r.distancia_m)) : undefined,
-      categorias: categoriasMap[r.id] || [],
-    }));
+    const data: NearbyEventoResponseDto[] = rows.map((r: EventoRow) => {
+      const evento: NearbyEventoResponseDto = {
+        id: r.id,
+        titulo: r.titulo,
+        descripcion: r.descripcion,
+        fechaInicio: r.fechaInicio,
+        direccionTexto: r.direccionTexto,
+        precio: r.precio,
+        categorias: categoriasMap[r.id] || [],
+      };
+
+      // Solo agregar distance si hay ubicación
+      if (hasLocation) {
+        evento.distance = Math.round(Number(r.distancia_m));
+      }
+
+      return evento;
+    });
 
     return {
       data,
@@ -420,7 +431,8 @@ export class EventoService {
   async findByEventId(
     eventId: string,
     userRole?: string,
-  ): Promise<PublicEventoDto> {
+    findEventDto?: FindEventDto,
+  ): Promise<PublicEventoDto & { distance?: number }> {
     // Construir condiciones de búsqueda según el rol
     const whereConditions: { id: string; status?: any; active?: boolean } = {
       id: eventId,
@@ -463,26 +475,51 @@ export class EventoService {
       throw new NotFoundException(errorMessage);
     }
 
-    return {
+    const response: PublicEventoDto & { distance?: number } = {
       id: evento.id,
       titulo: evento.titulo,
       descripcion: evento.descripcion,
-      imagenUrl: evento.imagenUrl,
       fechaInicio: evento.fechaInicio,
       fechaFin: evento.fechaFin,
-      active: evento.active,
       lat: evento.lat,
       lng: evento.lng,
       direccionTexto: evento.direccionTexto,
       precio: evento.precio,
       enlaceExterno: evento.enlaceExterno,
-      status: evento.status,
       isRecurrent: evento.isRecurrent,
       categorias: evento.eventoCategorias.map((ec) => ({
         nombre: ec.categoria.nombre,
         descripcion: ec.categoria.descripcion,
       })),
     };
+
+    // Calcular distancia si se proporcionaron coordenadas
+    if (findEventDto?.lat && findEventDto?.lng && evento.lat && evento.lng) {
+      try {
+        const distanceQuery = `
+          SELECT ST_Distance(
+            ST_SetSRID(ST_MakePoint($1, $2), 4326)::geography,
+            ST_SetSRID(ST_MakePoint($3, $4), 4326)::geography
+          ) as distancia_m
+        `;
+        const distanceResult: { distancia_m: string }[] =
+          await this.dataSource.query(distanceQuery, [
+            evento.lng,
+            evento.lat,
+            findEventDto.lng,
+            findEventDto.lat,
+          ]);
+
+        if (distanceResult && distanceResult.length > 0) {
+          response.distance = Math.round(Number(distanceResult[0].distancia_m));
+        }
+      } catch (error) {
+        console.error('Error calculando distancia:', error);
+        // No fallar si hay error en el cálculo de distancia
+      }
+    }
+
+    return response;
   }
 
   async findAllForCms(
@@ -748,5 +785,95 @@ export class EventoService {
     ];
 
     return statuses;
+  }
+
+  async findFilteredEvents(
+    filteredDto: FilteredEventsDto,
+    userRole?: string,
+  ): Promise<{ data: FilteredEventResponseDto[] }> {
+    const { date, distance, latitude, longitude } = filteredDto;
+
+    // Convertir distancia de km a metros
+    const distanceInMeters = distance * 1000;
+
+    // Determinar límite según la distancia
+    let limit: number;
+    switch (distance) {
+      case DistanceFilter.FIVE:
+        limit = 20;
+        break;
+      case DistanceFilter.TWENTY:
+        limit = 30;
+        break;
+      case DistanceFilter.FIFTY:
+        limit = 50;
+        break;
+      default:
+        limit = 20;
+    }
+
+    // Construir condiciones base
+    let whereConditions = 'active = true AND geom IS NOT NULL';
+    const queryParams: any[] = [latitude, longitude, distanceInMeters];
+
+    // Si no es admin, aplicar filtros de status
+    if (userRole !== 'admin') {
+      whereConditions += " AND status IN ('published', 'expired')";
+    }
+
+    // Filtro por fecha
+    let dateCondition = '';
+    switch (date) {
+      case DateFilter.TODAY:
+        dateCondition = `AND DATE(fecha_inicio) = DATE(NOW())`;
+        break;
+      case DateFilter.WEEK:
+        dateCondition = `AND fecha_inicio BETWEEN NOW() AND NOW() + INTERVAL '7 days'`;
+        break;
+      case DateFilter.MONTH:
+        dateCondition = `AND fecha_inicio BETWEEN NOW() AND NOW() + INTERVAL '30 days'`;
+        break;
+      case DateFilter.ALL:
+        dateCondition = ''; // Sin filtro de fecha
+        break;
+    }
+
+    if (dateCondition) {
+      whereConditions += ` ${dateCondition}`;
+    }
+
+    // Consulta principal
+    const query = `
+      SELECT 
+        e.id,
+        e.titulo,
+        e.lat,
+        e.lng,
+        ST_Distance(e.geom::geography, ST_SetSRID(ST_MakePoint($2, $1), 4326)::geography) AS distancia_m
+      FROM eventos e
+      WHERE ${whereConditions}
+        AND ST_DWithin(e.geom::geography, ST_SetSRID(ST_MakePoint($2, $1), 4326)::geography, $3)
+      ORDER BY distancia_m ASC
+      LIMIT ${limit}
+    `;
+
+    const rows: Array<{
+      id: string;
+      titulo: string;
+      lat: number;
+      lng: number;
+      distancia_m: number;
+    }> = await this.eventoRepository.query(query, queryParams);
+
+    // Construir respuesta
+    const data: FilteredEventResponseDto[] = rows.map((r) => ({
+      id: r.id,
+      titulo: r.titulo,
+      distance: Math.round(Number(r.distancia_m)),
+      lat: r.lat,
+      lng: r.lng,
+    }));
+
+    return { data };
   }
 }

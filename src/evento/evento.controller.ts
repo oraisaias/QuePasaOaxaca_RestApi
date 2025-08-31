@@ -16,6 +16,8 @@ import { UpdateEventoDto } from './dto/update-evento.dto';
 import { UpdateActiveDto } from './dto/update-active.dto';
 import { UpdateStatusDto } from './dto/update-status.dto';
 import { NearbyEventosDto } from './dto/nearby-eventos.dto';
+import { FilteredEventsDto } from './dto/filtered-events.dto';
+import { FindEventDto } from './dto/find-event.dto';
 import { PaginationDto } from './dto/pagination.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { AppAuthGuard } from '../auth/guards/app-auth.guard';
@@ -37,14 +39,12 @@ export class EventoController {
   @Post()
   @UseGuards(JwtAuthGuard)
   async create(@Body() createEventoDto: CreateEventoDto) {
-    console.log('create', createEventoDto);
     return this.eventoService.create(createEventoDto);
   }
 
   @Get()
   @UseGuards(AppAuthGuard)
   async findAll(@Req() request: AuthenticatedRequest) {
-    console.log('findAll');
     const userRole = request.user?.role;
     return this.eventoService.findAll(userRole);
   }
@@ -55,15 +55,23 @@ export class EventoController {
     @Body() nearbyDto: NearbyEventosDto,
     @Req() request: AuthenticatedRequest,
   ) {
-    console.log('findNearby', nearbyDto);
     const userRole = request.user?.role;
     return this.eventoService.findNearbyActive(nearbyDto, userRole);
+  }
+
+  @Post('filtered')
+  @UseGuards(AppAuthGuard)
+  async findFiltered(
+    @Body() filteredDto: FilteredEventsDto,
+    @Req() request: AuthenticatedRequest,
+  ) {
+    const userRole = request.user?.role;
+    return this.eventoService.findFilteredEvents(filteredDto, userRole);
   }
 
   @Get('cms')
   @UseGuards(CmsAuthGuard)
   async findAllForCms(@Query() paginationDto: PaginationDto) {
-    console.log('findAllForCms', paginationDto);
     return this.eventoService.findAllForCms(paginationDto);
   }
 
@@ -73,18 +81,21 @@ export class EventoController {
     return this.eventoService.getAvailableStatuses();
   }
 
-  @Get(':id')
+  @Post(':id')
   @UseGuards(AppAuthGuard)
-  async findOne(@Param('id') id: string, @Req() request: AuthenticatedRequest) {
-    console.log('findOne', id);
+  async findOne(
+    @Param('id') id: string,
+    @Body() findEventDto: FindEventDto,
+    @Req() request: AuthenticatedRequest,
+  ) {
+    console.log('findEventDto', findEventDto);
     const userRole = request.user?.role;
-    return this.eventoService.findByEventId(id, userRole);
+    return this.eventoService.findByEventId(id, userRole, findEventDto);
   }
 
   @Delete('cms/:id')
   @UseGuards(CmsAuthGuard)
   async removeCms(@Param('id') id: string) {
-    console.log('removeCms', id);
     await this.eventoService.removeById(id);
     return { message: 'Evento eliminado exitosamente' };
   }
@@ -95,7 +106,6 @@ export class EventoController {
     @Param('id') id: string,
     @Body() updateEventoDto: UpdateEventoDto,
   ) {
-    console.log('updateCms', id, updateEventoDto);
     return this.eventoService.updateById(id, updateEventoDto);
   }
 
@@ -105,7 +115,6 @@ export class EventoController {
     @Param('id') id: string,
     @Body() updateActiveDto: UpdateActiveDto,
   ) {
-    console.log('updateActive', id, updateActiveDto);
     return this.eventoService.updateActive(id, updateActiveDto);
   }
 
@@ -115,7 +124,6 @@ export class EventoController {
     @Param('id') id: string,
     @Body() updateStatusDto: UpdateStatusDto,
   ) {
-    console.log('updateStatus', id, updateStatusDto);
     return this.eventoService.updateStatus(id, updateStatusDto);
   }
 }
