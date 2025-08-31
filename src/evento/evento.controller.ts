@@ -81,7 +81,7 @@ export class EventoController {
     return this.eventoService.getAvailableStatuses();
   }
 
-  @Post(':id')
+  @Post('app/:id')
   @UseGuards(AppAuthGuard)
   async findOne(
     @Param('id') id: string,
