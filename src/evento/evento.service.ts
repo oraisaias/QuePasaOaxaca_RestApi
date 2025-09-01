@@ -98,6 +98,8 @@ export class EventoService {
     evento.titulo = createEventoDto.titulo;
     if (createEventoDto.descripcion)
       evento.descripcion = createEventoDto.descripcion;
+    if (createEventoDto.descripcionLarga)
+      evento.descripcionLarga = createEventoDto.descripcionLarga;
     if (createEventoDto.imagenUrl) evento.imagenUrl = createEventoDto.imagenUrl;
     evento.fechaInicio = new Date(createEventoDto.fechaInicio);
     if (createEventoDto.fechaFin)
@@ -451,6 +453,7 @@ export class EventoService {
         'id',
         'titulo',
         'descripcion',
+        'descripcionLarga',
         'imagenUrl',
         'fechaInicio',
         'fechaFin',
@@ -459,6 +462,7 @@ export class EventoService {
         'direccionTexto',
         'precio',
         'enlaceExterno',
+        'phoneNumbers',
         'status',
         'active',
         'isRecurrent',
@@ -479,6 +483,7 @@ export class EventoService {
       id: evento.id,
       titulo: evento.titulo,
       descripcion: evento.descripcion,
+      descripcionLarga: evento.descripcionLarga,
       fechaInicio: evento.fechaInicio,
       fechaFin: evento.fechaFin,
       lat: evento.lat,
@@ -487,6 +492,7 @@ export class EventoService {
       precio: evento.precio,
       enlaceExterno: evento.enlaceExterno,
       isRecurrent: evento.isRecurrent,
+      phoneNumbers: evento.phoneNumbers,
       categorias: evento.eventoCategorias.map((ec) => ({
         nombre: ec.categoria.nombre,
         descripcion: ec.categoria.descripcion,
@@ -620,6 +626,9 @@ export class EventoService {
     if (updateEventoDto.descripcion !== undefined) {
       eventoToUpdate.descripcion = updateEventoDto.descripcion;
     }
+    if (updateEventoDto.descripcionLarga !== undefined) {
+      eventoToUpdate.descripcionLarga = updateEventoDto.descripcionLarga;
+    }
     if (updateEventoDto.imagenUrl !== undefined) {
       eventoToUpdate.imagenUrl = updateEventoDto.imagenUrl;
     }
@@ -640,6 +649,9 @@ export class EventoService {
     }
     if (updateEventoDto.precio !== undefined) {
       eventoToUpdate.precio = updateEventoDto.precio;
+    }
+    if (updateEventoDto.phoneNumbers !== undefined) {
+      eventoToUpdate.phoneNumbers = updateEventoDto.phoneNumbers;
     }
     if (updateEventoDto.enlaceExterno !== undefined) {
       eventoToUpdate.enlaceExterno = updateEventoDto.enlaceExterno;
@@ -714,6 +726,7 @@ export class EventoService {
       titulo: updatedEvento.titulo,
       fechaInicio: updatedEvento.fechaInicio.toISOString(),
       direccionTexto: updatedEvento.direccionTexto,
+      phoneNumbers: updatedEvento.phoneNumbers,
       status: updatedEvento.status,
       precio: updatedEvento.precio,
       active: updatedEvento.active,

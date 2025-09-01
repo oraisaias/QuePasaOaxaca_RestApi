@@ -1,102 +1,228 @@
-## Description
+# 🎉 Que Pasa Oaxaca API
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+<div align="center">
+  <img src="Github/uno.png" alt="Que Pasa Oaxaca App Screenshot 1" width="300"/>
+  <img src="Github/dos.png" alt="Que Pasa Oaxaca App Screenshot 2" width="300"/>
+  <img src="Github/tres.png" alt="Que Pasa Oaxaca App Screenshot 3" width="300"/>
+</div>
 
-## Project setup
+## 📋 Descripción del Proyecto
 
-```bash
-$ yarn install
+**Que Pasa Oaxaca** es una API REST completa desarrollada en **NestJS** que gestiona eventos culturales y turísticos en Oaxaca, México. La aplicación permite a los usuarios descubrir, buscar y gestionar eventos locales con funcionalidades avanzadas de geolocalización y filtrado inteligente.
+
+## 🚀 Características Principales
+
+### 🎯 **Gestión de Eventos**
+- ✅ Creación, edición y eliminación de eventos
+- ✅ Descripciones cortas (350 chars) y largas (1700 chars)
+- ✅ Geolocalización con coordenadas GPS
+- ✅ Estados de eventos: draft, published, archived, expired
+- ✅ Sistema de categorización flexible
+
+### 🔍 **Búsqueda Inteligente**
+- ✅ **Búsqueda por proximidad** con filtros de radio
+- ✅ **Filtrado por fecha** (hoy, semana, mes)
+- ✅ **Búsqueda por categorías** y palabras clave
+- ✅ **Ordenamiento** por relevancia, proximidad o fecha
+- ✅ **Paginación** inteligente
+
+### 🗺️ **Geolocalización Avanzada**
+- ✅ **Cálculo de distancias** usando PostGIS
+- ✅ **Búsquedas por radio** (5km, 20km, 50km)
+- ✅ **Filtrado por proximidad** con coordenadas opcionales
+- ✅ **Optimización espacial** para consultas rápidas
+
+### 🔐 **Sistema de Autenticación**
+- ✅ **JWT** para autenticación segura
+- ✅ **Roles diferenciados**: admin, app_user, app_user_logged
+- ✅ **Guards personalizados** para control de acceso
+- ✅ **Validación robusta** con class-validator
+
+### 📱 **Funcionalidades de Usuario**
+- ✅ **Sistema de favoritos** por usuario y dispositivo
+- ✅ **Perfiles de usuario** con roles
+- ✅ **Gestión de categorías** personalizadas
+
+## 🛠️ Stack Tecnológico
+
+### **Backend Framework**
+- **NestJS** - Framework Node.js progresivo
+- **TypeScript** - Tipado estático para mayor robustez
+- **TypeORM** - ORM para PostgreSQL
+
+### **Base de Datos**
+- **PostgreSQL** - Base de datos principal
+- **PostGIS** - Extensiones geoespaciales
+- **Migrations** - Control de versiones de esquema
+
+### **Autenticación & Seguridad**
+- **JWT** - JSON Web Tokens
+- **Passport.js** - Estrategias de autenticación
+- **bcryptjs** - Hashing de contraseñas
+- **class-validator** - Validación de datos
+
+### **Documentación & Testing**
+- **Swagger/OpenAPI** - Documentación interactiva
+- **Jest** - Framework de testing
+- **ESLint + Prettier** - Linting y formateo
+
+### **Integraciones**
+- **OpenAI API** - Funcionalidades de IA
+- **CORS** - Configuración para frontend
+
+## 📊 Arquitectura del Proyecto
+
+```
+src/
+├── auth/           # Autenticación y autorización
+├── evento/         # Gestión de eventos
+├── categoria/      # Categorías de eventos
+├── user/           # Gestión de usuarios
+├── favorite/       # Sistema de favoritos
+├── openai/         # Integración con IA
+└── migrations/     # Migraciones de base de datos
 ```
 
-## Environment Configuration
+## 🔧 Endpoints Principales
 
-1. Copy the environment configuration file:
+### **Eventos**
+- `POST /eventos` - Crear evento
+- `GET /eventos` - Listar eventos
+- `POST /eventos/nearby` - Búsqueda por proximidad
+- `POST /eventos/filtered` - Filtrado avanzado
+- `POST /eventos/:id` - Obtener evento específico
+
+### **Autenticación**
+- `POST /auth/login` - Iniciar sesión
+- `POST /auth/register` - Registrar usuario
+
+### **Categorías**
+- `GET /categorias` - Listar categorías
+- `POST /categorias` - Crear categoría
+
+## 🚀 Instalación y Configuración
+
+### **Prerrequisitos**
+- Node.js 18+
+- PostgreSQL 12+
+- PostGIS extension
+
+### **Instalación**
 ```bash
-$ cp config/env.example .env
+# Clonar repositorio
+git clone <repository-url>
+cd que-pasa-oaxaca-api
+
+# Instalar dependencias
+npm install
+
+# Configurar variables de entorno
+cp config/env.example .env
+
+# Ejecutar migraciones
+npm run migration:run
+
+# Iniciar en desarrollo
+npm run start:dev
 ```
 
-2. Edit `.env` file with your configuration:
-```bash
-# JWT Configuration
-JWT_SECRET=
-JWT_EXPIRES_IN=
+### **Variables de Entorno**
+```env
+# Database
+DB_HOST=localhost
+DB_PORT=5432
+DB_USERNAME=postgres
+DB_PASSWORD=password
+DB_DATABASE=que_pasa_oaxaca
 
-# Database Configuration
-DB_HOST=
-DB_PORT=
-DB_USERNAME=
-DB_PASSWORD=
-DB_DATABASE=
+# JWT
+JWT_SECRET=your-secret-key
+JWT_EXPIRES_IN=7d
 
-# App Configuration
-PORT=3000
-NODE_ENV=development
+# OpenAI
+OPENAI_API_KEY=your-openai-key
 ```
 
-**⚠️ Important:** Never commit your `.env` file to version control. Make sure it's in your `.gitignore`.
+## 📚 Documentación
 
-## Compile and run the project
-
-```bash
-# development
-$ yarn run start
-
-# watch mode
-$ yarn run start:dev
-
-# production mode
-$ yarn run start:prod
+### **Swagger UI**
+Accede a la documentación interactiva en:
+```
+http://localhost:3000/api/docs
 ```
 
-## Run tests
+### **API Documentation**
+Ver documentación completa en: `API_DOCUMENTATION.md`
+
+## 🧪 Testing
 
 ```bash
-# unit tests
-$ yarn run test
+# Unit tests
+npm run test
 
-# e2e tests
-$ yarn run test:e2e
+# E2E tests
+npm run test:e2e
 
-# test coverage
-$ yarn run test:cov
+# Coverage
+npm run test:cov
 ```
 
-## Deployment
+## 📈 Características Destacadas
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
+### **Performance**
+- ✅ **Consultas optimizadas** con TypeORM
+- ✅ **Índices geoespaciales** en PostgreSQL
+- ✅ **Paginación eficiente** para grandes datasets
+- ✅ **Caching** de consultas frecuentes
 
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+### **Escalabilidad**
+- ✅ **Arquitectura modular** con NestJS
+- ✅ **Separación de responsabilidades**
+- ✅ **Migrations** para cambios de esquema
+- ✅ **Configuración por entorno**
 
-```bash
-$ yarn install -g @nestjs/mau
-$ mau deploy
-```
+### **Mantenibilidad**
+- ✅ **TypeScript** para tipado estático
+- ✅ **ESLint + Prettier** para consistencia
+- ✅ **Documentación automática** con Swagger
+- ✅ **Tests unitarios y E2E**
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+## 🎯 Casos de Uso
 
-## Resources
+### **Para Usuarios Finales**
+- Descubrir eventos cercanos a su ubicación
+- Filtrar eventos por categoría, fecha o distancia
+- Guardar eventos favoritos
+- Obtener información detallada de eventos
 
-Check out a few resources that may come in handy when working with NestJS:
+### **Para Administradores**
+- Crear y gestionar eventos
+- Moderar contenido de eventos
+- Analizar métricas de uso
+- Gestionar categorías y usuarios
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+## 🤝 Contribución
 
-## Support
+1. Fork el proyecto
+2. Crea una rama para tu feature (`git checkout -b feature/AmazingFeature`)
+3. Commit tus cambios (`git commit -m 'Add some AmazingFeature'`)
+4. Push a la rama (`git push origin feature/AmazingFeature`)
+5. Abre un Pull Request
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+## 📄 Licencia
 
-## Stay in touch
+Este proyecto está bajo la Licencia MIT. Ver `LICENSE` para más detalles.
 
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+## 👨‍💻 Autor
 
-## License
+**Isaias Chávez Martínez**
+- LinkedIn: [Tu LinkedIn]
+- GitHub: [Tu GitHub]
+- Email: [Tu Email]
 
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+---
+
+<div align="center">
+  <p>Desarrollado con ❤️ para la comunidad de Oaxaca</p>
+  <p>¡Descubre los eventos más increíbles de Oaxaca!</p>
+</div>

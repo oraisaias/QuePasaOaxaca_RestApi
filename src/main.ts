@@ -1,6 +1,7 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
+import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -43,6 +44,37 @@ async function bootstrap() {
       transform: true,
     }),
   );
+
+  // Configurar Swagger
+  const config = new DocumentBuilder()
+    .setTitle('Que Pasa Oaxaca API')
+    .setDescription('API para gestión de eventos culturales y turísticos en Oaxaca')
+    .setVersion('1.0')
+    .addTag('auth', 'Autenticación y autorización')
+    .addTag('eventos', 'Gestión de eventos')
+    .addTag('categorias', 'Gestión de categorías')
+    .addTag('usuarios', 'Gestión de usuarios')
+    .addTag('favoritos', 'Gestión de favoritos')
+    .addTag('openai', 'Integración con OpenAI')
+    .addBearerAuth(
+      {
+        type: 'http',
+        scheme: 'bearer',
+        bearerFormat: 'JWT',
+        name: 'JWT',
+        description: 'Enter JWT token',
+        in: 'header',
+      },
+      'JWT-auth',
+    )
+    .build();
+
+  const document = SwaggerModule.createDocument(app, config);
+  SwaggerModule.setup('api/docs', app, document, {
+    swaggerOptions: {
+      persistAuthorization: true,
+    },
+  });
 
   await app.listen(process.env.PORT ?? 3000);
 }

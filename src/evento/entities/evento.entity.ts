@@ -28,8 +28,11 @@ export class Evento {
   @Column()
   titulo: string;
 
-  @Column({ nullable: true })
+  @Column({ nullable: true, length: 350 })
   descripcion: string;
+
+  @Column({ name: 'descripcion_larga', nullable: true, length: 1700 })
+  descripcionLarga: string;
 
   @Column({ name: 'imagen_url', nullable: true })
   imagenUrl: string;
@@ -51,6 +54,13 @@ export class Evento {
 
   @Column({ type: 'numeric', precision: 10, scale: 2, nullable: true })
   precio: number;
+
+  @Column({
+    name: 'phone_numbers',
+    type: 'text',
+    nullable: true,
+  })
+  phoneNumbers: string;
 
   @Column({ name: 'enlace_externo', nullable: true })
   enlaceExterno: string;

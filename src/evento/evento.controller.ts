@@ -10,6 +10,7 @@ import {
   Patch,
   Req,
 } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiParam, ApiBody } from '@nestjs/swagger';
 import { EventoService } from './evento.service';
 import { CreateEventoDto } from './dto/create-evento.dto';
 import { UpdateEventoDto } from './dto/update-evento.dto';
@@ -32,11 +33,21 @@ interface AuthenticatedRequest {
   };
 }
 
+@ApiTags('eventos')
 @Controller('eventos')
 export class EventoController {
   constructor(private readonly eventoService: EventoService) {}
 
   @Post()
+  @ApiOperation({ summary: 'Crear un nuevo evento' })
+  @ApiResponse({ 
+    status: 201, 
+    description: 'Evento creado exitosamente',
+    type: CreateEventoDto 
+  })
+  @ApiResponse({ status: 400, description: 'Datos inválidos' })
+  @ApiResponse({ status: 401, description: 'No autorizado' })
+  @ApiBearerAuth('JWT-auth')
   @UseGuards(JwtAuthGuard)
   async create(@Body() createEventoDto: CreateEventoDto) {
     return this.eventoService.create(createEventoDto);
@@ -88,7 +99,6 @@ export class EventoController {
     @Body() findEventDto: FindEventDto,
     @Req() request: AuthenticatedRequest,
   ) {
-    console.log('findEventDto', findEventDto);
     const userRole = request.user?.role;
     return this.eventoService.findByEventId(id, userRole, findEventDto);
   }
@@ -106,6 +116,7 @@ export class EventoController {
     @Param('id') id: string,
     @Body() updateEventoDto: UpdateEventoDto,
   ) {
+    console.log('ACTUALIZAR EVENTO CMS', updateEventoDto);
     return this.eventoService.updateById(id, updateEventoDto);
   }
 

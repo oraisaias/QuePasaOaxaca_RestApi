@@ -9,6 +9,7 @@ export class CmsEventoDto {
   active: boolean;
   isRecurrent: boolean;
   status: EventStatus;
+  phoneNumbers?: string;
   categoriaIds: {
     id: string;
     nombre: string;

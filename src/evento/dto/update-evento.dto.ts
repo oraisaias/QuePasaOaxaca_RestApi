@@ -21,6 +21,10 @@ export class UpdateEventoDto {
   descripcion?: string;
 
   @IsOptional()
+  @IsString()
+  descripcionLarga?: string;
+
+  @IsOptional()
   @IsUrl()
   imagenUrl?: string;
 
@@ -52,6 +56,10 @@ export class UpdateEventoDto {
   @IsNumber()
   @Min(0)
   precio?: number;
+
+  @IsOptional()
+  @IsString()
+  phoneNumbers?: string;
 
   @IsOptional()
   @IsUrl()
