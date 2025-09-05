@@ -8,6 +8,8 @@ import { Repository, In, DataSource } from 'typeorm';
 import { Evento, EventStatus } from './entities/evento.entity';
 import { EventoCategoria } from './entities/evento-categoria.entity';
 import { Categoria } from '../categoria/entities/categoria.entity';
+import { Importancia } from './entities/importancia.entity';
+import { Recurrencia } from './entities/recurrencia.entity';
 import { CreateEventoDto } from './dto/create-evento.dto';
 import { UpdateEventoDto } from './dto/update-evento.dto';
 import { UpdateActiveDto } from './dto/update-active.dto';
@@ -19,7 +21,7 @@ import {
 import { CmsEventoDto } from './dto/cms-evento.dto';
 import { PaginationDto } from './dto/pagination.dto';
 import { PaginatedResponseDto } from './dto/paginated-response.dto';
-import { PublicEventoDto } from './dto/public-evento.dto';
+import { PublicEventoCMSDto, PublicEventoDto } from './dto/public-evento.dto';
 import {
   NearbyEventosDto,
   Suggestion,
@@ -63,6 +65,10 @@ export class EventoService {
     private eventoCategoriaRepository: Repository<EventoCategoria>,
     @InjectRepository(Categoria)
     private categoriaRepository: Repository<Categoria>,
+    @InjectRepository(Importancia)
+    private importanciaRepository: Repository<Importancia>,
+    @InjectRepository(Recurrencia)
+    private recurrenciaRepository: Repository<Recurrencia>,
     private dataSource: DataSource,
   ) {}
 
@@ -119,6 +125,26 @@ export class EventoService {
       createEventoDto.isRecurrent !== undefined
         ? createEventoDto.isRecurrent
         : false;
+
+    // Establecer importancia (por defecto 1 si no se proporciona)
+    if (createEventoDto.importancia) {
+      const importancia = await this.importanciaRepository.findOne({
+        where: { nombre: createEventoDto.importancia },
+      });
+      if (importancia) {
+        evento.importancia = importancia;
+      }
+    }
+
+    // Establecer recurrencia (por defecto 1 si no se proporciona)
+    if (createEventoDto.recurrencia) {
+      const recurrencia = await this.recurrenciaRepository.findOne({
+        where: { nombre: createEventoDto.recurrencia },
+      });
+      if (recurrencia) {
+        evento.recurrencia = recurrencia;
+      }
+    }
 
     // Guardar el evento
     const savedEvento = await this.eventoRepository.save(evento);
@@ -362,72 +388,7 @@ export class EventoService {
         hasNext: page < totalPages,
         hasPrev: page > 1,
       },
-      filters: {
-        applied: {
-          categories: categories?.length || 0,
-          time: time || undefined,
-          proximity: finalProximity,
-          sortBy: finalSortBy,
-        },
-      },
     };
-  }
-
-  async findAll(userRole?: string): Promise<PublicEventoDto[]> {
-    // Construir condiciones de búsqueda según el rol
-    const whereConditions: { active?: boolean; status?: any } = {};
-
-    // Si no es admin, aplicar filtros de status y active
-    if (userRole !== 'admin') {
-      whereConditions.active = true;
-      whereConditions.status = In([EventStatus.PUBLISHED, EventStatus.EXPIRED]);
-    }
-
-    const eventos = await this.eventoRepository.find({
-      where: whereConditions, // Solo eventos activos y publicados/expirados para la app
-      select: [
-        'id',
-        'titulo',
-        'descripcion',
-        'imagenUrl',
-        'fechaInicio',
-        'fechaFin',
-        'lat',
-        'lng',
-        'direccionTexto',
-        'precio',
-        'enlaceExterno',
-        'status',
-        'active',
-        'createdBy',
-      ],
-      relations: ['eventoCategorias', 'eventoCategorias.categoria'],
-    });
-
-    // Transformar a la estructura deseada con ID directo
-    if (eventos.length === 0) {
-      return [];
-    }
-    return eventos.map((evento) => ({
-      id: evento.id,
-      titulo: evento.titulo,
-      descripcion: evento.descripcion,
-      imagenUrl: evento.imagenUrl,
-      fechaInicio: evento.fechaInicio,
-      fechaFin: evento.fechaFin,
-      lat: evento.lat,
-      lng: evento.lng,
-      direccionTexto: evento.direccionTexto,
-      precio: evento.precio,
-      enlaceExterno: evento.enlaceExterno,
-      status: evento.status,
-      active: evento.active,
-      isRecurrent: evento.isRecurrent,
-      categorias: evento.eventoCategorias.map((ec) => ({
-        nombre: ec.categoria.nombre,
-        descripcion: ec.categoria.descripcion,
-      })),
-    }));
   }
 
   async findByEventId(
@@ -439,37 +400,66 @@ export class EventoService {
     const whereConditions: { id: string; status?: any; active?: boolean } = {
       id: eventId,
     };
-
+    console.log({userRole, findEventDto});
     // Si no es admin, aplicar filtros de status y active
     if (userRole !== 'admin') {
       whereConditions.status = In([EventStatus.PUBLISHED, EventStatus.EXPIRED]);
       whereConditions.active = true;
     }
-
+    let evento: Evento | null = null;
+    if (userRole === 'admin') {
+      evento = await this.eventoRepository.findOne({
+        where: whereConditions,
+        select: [
+          'id',
+          'titulo',
+          'descripcion',
+          'descripcionLarga',
+          'imagenUrl',
+          'fechaInicio',
+          'fechaFin',
+          'lat',
+          'lng',
+          'direccionTexto',
+          'precio',
+          'enlaceExterno',
+          'phoneNumbers',
+          'status',
+          'active',
+          'isRecurrent',
+          'createdBy',
+          'importancia',
+          'recurrencia',
+        ],
+        relations: ['eventoCategorias', 'eventoCategorias.categoria'],
+      });
+    } else if (userRole === 'app_user') {
+      evento = await this.eventoRepository.findOne({
+        where: whereConditions,
+        select: [
+          'id',
+          'titulo',
+          'descripcion',
+          'descripcionLarga',
+          'imagenUrl',
+          'fechaInicio',
+          'fechaFin',
+          'lat',
+          'lng',
+          'direccionTexto',
+          'precio',
+          'enlaceExterno',
+          'phoneNumbers',
+          'status',
+          'active',
+          'isRecurrent',
+          'importancia',
+          'recurrencia',
+        ],
+        relations: ['eventoCategorias', 'eventoCategorias.categoria'],
+      });
+    }
     // Buscar el evento por su ID directo
-    const evento = await this.eventoRepository.findOne({
-      where: whereConditions,
-      select: [
-        'id',
-        'titulo',
-        'descripcion',
-        'descripcionLarga',
-        'imagenUrl',
-        'fechaInicio',
-        'fechaFin',
-        'lat',
-        'lng',
-        'direccionTexto',
-        'precio',
-        'enlaceExterno',
-        'phoneNumbers',
-        'status',
-        'active',
-        'isRecurrent',
-        'createdBy',
-      ],
-      relations: ['eventoCategorias', 'eventoCategorias.categoria'],
-    });
 
     if (!evento) {
       const errorMessage =
@@ -479,25 +469,58 @@ export class EventoService {
       throw new NotFoundException(errorMessage);
     }
 
-    const response: PublicEventoDto & { distance?: number } = {
-      id: evento.id,
-      titulo: evento.titulo,
-      descripcion: evento.descripcion,
-      descripcionLarga: evento.descripcionLarga,
-      fechaInicio: evento.fechaInicio,
-      fechaFin: evento.fechaFin,
-      lat: evento.lat,
-      lng: evento.lng,
-      direccionTexto: evento.direccionTexto,
-      precio: evento.precio,
-      enlaceExterno: evento.enlaceExterno,
-      isRecurrent: evento.isRecurrent,
-      phoneNumbers: evento.phoneNumbers,
-      categorias: evento.eventoCategorias.map((ec) => ({
-        nombre: ec.categoria.nombre,
-        descripcion: ec.categoria.descripcion,
-      })),
-    };
+    let response:
+      | ((PublicEventoDto | PublicEventoCMSDto) & {
+          distance?: number;
+        })
+      | null = null;
+    if (userRole === 'admin') {
+      response = {
+        id: evento.id,
+        titulo: evento.titulo,
+        descripcion: evento.descripcion,
+        descripcionLarga: evento.descripcionLarga,
+        fechaInicio: evento.fechaInicio,
+        fechaFin: evento.fechaFin,
+        lat: evento.lat,
+        status: evento.status,
+        lng: evento.lng,
+        direccionTexto: evento.direccionTexto,
+        precio: evento.precio,
+        enlaceExterno: evento.enlaceExterno,
+        isRecurrent: evento.isRecurrent,
+        phoneNumbers: evento.phoneNumbers,
+        importancia: evento.importancia.nombre,
+        recurrencia: evento.recurrencia.nombre,
+        categorias: evento.eventoCategorias.map((ec) => ({
+          nombre: ec.categoria.nombre,
+          descripcion: ec.categoria.descripcion,
+        })),
+      };
+    } else if (userRole === 'app_user') {
+      response = {
+        titulo: evento.titulo,
+        descripcion: evento.descripcion,
+        descripcionLarga: evento.descripcionLarga,
+        fechaInicio: evento.fechaInicio,
+        fechaFin: evento.fechaFin,
+        lat: evento.lat,
+        lng: evento.lng,
+        direccionTexto: evento.direccionTexto,
+        precio: evento.precio,
+        enlaceExterno: evento.enlaceExterno,
+        isRecurrent: evento.isRecurrent,
+        phoneNumbers: evento.phoneNumbers,
+        importancia: evento.importancia.nombre,
+        recurrencia: evento.recurrencia.nombre,
+        categorias: evento.eventoCategorias.map((ec) => ({
+          nombre: ec.categoria.nombre,
+          descripcion: ec.categoria.descripcion,
+        })),
+      };
+    } else {
+      throw new BadRequestException('Rol no válido');
+    }
 
     // Calcular distancia si se proporcionaron coordenadas
     if (findEventDto?.lat && findEventDto?.lng && evento.lat && evento.lng) {
@@ -528,7 +551,7 @@ export class EventoService {
     return response;
   }
 
-  async findAllForCms(
+  async findAll(
     paginationDto: PaginationDto,
   ): Promise<PaginatedResponseDto<CmsEventoDto>> {
     const { page = 1, limit = 10 } = paginationDto;
@@ -664,6 +687,22 @@ export class EventoService {
     }
     if (updateEventoDto.isRecurrent !== undefined) {
       eventoToUpdate.isRecurrent = updateEventoDto.isRecurrent;
+    }
+    if (updateEventoDto.importancia !== undefined) {
+      const importancia = await this.importanciaRepository.findOne({
+        where: { nombre: updateEventoDto.importancia },
+      });
+      if (importancia) {
+        eventoToUpdate.importancia = importancia;
+      }
+    }
+    if (updateEventoDto.recurrencia !== undefined) {
+      const recurrencia = await this.recurrenciaRepository.findOne({
+        where: { nombre: updateEventoDto.recurrencia },
+      });
+      if (recurrencia) {
+        eventoToUpdate.recurrencia = recurrencia;
+      }
     }
 
     // Guardar el evento actualizado

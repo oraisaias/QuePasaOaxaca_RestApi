@@ -37,7 +37,8 @@ export class CreateEventoDto {
 
   @ApiProperty({
     description: 'Descripción detallada del evento',
-    example: 'Un evento cultural que celebra la riqueza musical de Oaxaca con presentaciones de grupos tradicionales, talleres de instrumentos y degustación de comida local.',
+    example:
+      'Un evento cultural que celebra la riqueza musical de Oaxaca con presentaciones de grupos tradicionales, talleres de instrumentos y degustación de comida local.',
     maxLength: 1700,
     required: false,
   })
@@ -89,4 +90,13 @@ export class CreateEventoDto {
   @IsOptional()
   phoneNumbers?: string;
 
+  @IsString()
+  @IsNotEmpty()
+  @IsOptional()
+  importancia?: string;
+
+  @IsString()
+  @IsNotEmpty()
+  @IsOptional()
+  recurrencia?: string;
 }

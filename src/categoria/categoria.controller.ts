@@ -45,4 +45,16 @@ export class CategoriaController {
     await this.categoriaService.remove(id);
     return { message: 'Categoría eliminada exitosamente' };
   }
+
+  @Get('importancia')
+  @UseGuards(JwtAuthGuard)
+  async getImportanciaValues() {
+    return this.categoriaService.getImportanciaValues();
+  }
+
+  @Get('recurrencia')
+  @UseGuards(JwtAuthGuard)
+  async getRecurrenciaValues() {
+    return this.categoriaService.getRecurrenciaValues();
+  }
 }

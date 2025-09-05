@@ -31,7 +31,4 @@ export class AppliedFiltersDto {
 export class NearbyResponseDto {
   data: NearbyEventoResponseDto[];
   pagination: NearbyPaginationDto;
-  filters: {
-    applied: AppliedFiltersDto;
-  };
 }

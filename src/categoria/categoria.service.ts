@@ -9,12 +9,18 @@ import { Categoria } from './entities/categoria.entity';
 import { CreateCategoriaDto } from './dto/create-categoria.dto';
 import { UpdateCategoriaDto } from './dto/update-categoria.dto';
 import { CategoriaResponseDto } from './dto/categoria-response.dto';
+import { Importancia } from '../evento/entities/importancia.entity';
+import { Recurrencia } from '../evento/entities/recurrencia.entity';
 
 @Injectable()
 export class CategoriaService {
   constructor(
     @InjectRepository(Categoria)
     private categoriaRepository: Repository<Categoria>,
+    @InjectRepository(Importancia)
+    private importanciaRepository: Repository<Importancia>,
+    @InjectRepository(Recurrencia)
+    private recurrenciaRepository: Repository<Recurrencia>,
   ) {}
 
   async create(createCategoriaDto: CreateCategoriaDto): Promise<Categoria> {
@@ -102,4 +108,14 @@ export class CategoriaService {
     // Eliminar la categoría
     await this.categoriaRepository.remove(categoria);
   }
+
+  getImportanciaValues = async (): Promise<{ label: string }[]> =>
+    (await this.importanciaRepository.find()).map(({ nombre }) => ({
+      label: nombre,
+    }));
+
+  getRecurrenciaValues = async (): Promise<{ label: string }[]> =>
+    (await this.recurrenciaRepository.find()).map(({ nombre }) => ({
+      label: nombre,
+    }));
 }

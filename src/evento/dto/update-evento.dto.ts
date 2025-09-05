@@ -81,4 +81,12 @@ export class UpdateEventoDto {
   @IsOptional()
   @IsBoolean()
   isRecurrent?: boolean;
+
+  @IsOptional()
+  @IsString()
+  importancia?: string;
+
+  @IsOptional()
+  @IsString()
+  recurrencia?: string;
 }

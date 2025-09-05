@@ -10,7 +10,12 @@ import {
   Patch,
   Req,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth, ApiParam, ApiBody } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBearerAuth,
+} from '@nestjs/swagger';
 import { EventoService } from './evento.service';
 import { CreateEventoDto } from './dto/create-evento.dto';
 import { UpdateEventoDto } from './dto/update-evento.dto';
@@ -40,10 +45,10 @@ export class EventoController {
 
   @Post()
   @ApiOperation({ summary: 'Crear un nuevo evento' })
-  @ApiResponse({ 
-    status: 201, 
+  @ApiResponse({
+    status: 201,
     description: 'Evento creado exitosamente',
-    type: CreateEventoDto 
+    type: CreateEventoDto,
   })
   @ApiResponse({ status: 400, description: 'Datos inválidos' })
   @ApiResponse({ status: 401, description: 'No autorizado' })
@@ -51,13 +56,6 @@ export class EventoController {
   @UseGuards(JwtAuthGuard)
   async create(@Body() createEventoDto: CreateEventoDto) {
     return this.eventoService.create(createEventoDto);
-  }
-
-  @Get()
-  @UseGuards(AppAuthGuard)
-  async findAll(@Req() request: AuthenticatedRequest) {
-    const userRole = request.user?.role;
-    return this.eventoService.findAll(userRole);
   }
 
   @Post('nearby')
@@ -83,7 +81,7 @@ export class EventoController {
   @Get('cms')
   @UseGuards(CmsAuthGuard)
   async findAllForCms(@Query() paginationDto: PaginationDto) {
-    return this.eventoService.findAllForCms(paginationDto);
+    return this.eventoService.findAll(paginationDto);
   }
 
   @Get('cms/statuses')
@@ -99,6 +97,7 @@ export class EventoController {
     @Body() findEventDto: FindEventDto,
     @Req() request: AuthenticatedRequest,
   ) {
+    console.log("ENCONTRAR EVENTO", id, findEventDto);
     const userRole = request.user?.role;
     return this.eventoService.findByEventId(id, userRole, findEventDto);
   }

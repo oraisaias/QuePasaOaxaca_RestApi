@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 💬 Discord Community
+    url: https://discord.gg/que-pasa-oaxaca
+    about: Únete a nuestra comunidad de Discord para discusiones y soporte
+  - name: 📧 Email Support
+    url: mailto:support@quepasaoaxaca.com
+    about: Contacta directamente por email para soporte técnico
+  - name: 📖 Documentation
+    url: https://docs.quepasaoaxaca.com
+    about: Consulta nuestra documentación completa

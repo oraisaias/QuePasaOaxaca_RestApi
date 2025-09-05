@@ -12,6 +12,8 @@ import { User } from '../../user/entities/user.entity';
 import { EventoCategoria } from './evento-categoria.entity';
 import { UserFavorite } from '../../favorite/entities/user-favorite.entity';
 import { DeviceFavorite } from '../../favorite/entities/device-favorite.entity';
+import { Importancia } from './importancia.entity';
+import { Recurrencia } from './recurrencia.entity';
 
 export enum EventStatus {
   DRAFT = 'draft',
@@ -78,6 +80,14 @@ export class Evento {
 
   @Column({ name: 'is_recurrent', default: false })
   isRecurrent: boolean;
+
+  @ManyToOne(() => Importancia, { eager: true })
+  @JoinColumn({ name: 'importancia_id' })
+  importancia: Importancia;
+
+  @ManyToOne(() => Recurrencia, { eager: true })
+  @JoinColumn({ name: 'recurrencia_id' })
+  recurrencia: Recurrencia;
 
   @Column({ name: 'created_by', nullable: true })
   createdBy: string;

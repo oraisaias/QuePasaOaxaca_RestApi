@@ -15,6 +15,8 @@ import { BannedUser } from './user/entities/banned-user.entity';
 import { Categoria } from './categoria/entities/categoria.entity';
 import { Evento } from './evento/entities/evento.entity';
 import { EventoCategoria } from './evento/entities/evento-categoria.entity';
+import { Importancia } from './evento/entities/importancia.entity';
+import { Recurrencia } from './evento/entities/recurrencia.entity';
 import { UserFavorite } from './favorite/entities/user-favorite.entity';
 import { DeviceFavorite } from './favorite/entities/device-favorite.entity';
 
@@ -32,6 +34,8 @@ const DBModule = TypeOrmModule.forRoot({
     Categoria,
     Evento,
     EventoCategoria,
+    Importancia,
+    Recurrencia,
     UserFavorite,
     DeviceFavorite,
   ],
